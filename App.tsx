@@ -6,7 +6,7 @@ import { runSimulation } from './lib/financeMath';
 import { InputPanel } from './components/InputPanel';
 import { ResultsSummary } from './components/ResultsSummary';
 import { ViewToggle } from './components/ViewToggle';
-import { LayoutDashboard, Sliders, PieChart, Menu, Trash2, Plus, Loader2, Layers, User, ArrowDown, ChevronDown } from 'lucide-react';
+import { LayoutDashboard, Sliders, PieChart, Menu, Trash2, Plus, Loader2, Layers, User, ArrowDown, ChevronDown, X, Save } from 'lucide-react';
 
 // Lazy load heavy components to save bandwidth and initial load time
 const ChartPanel = React.lazy(() => import('./components/ChartPanel').then(module => ({ default: module.ChartPanel })));
@@ -101,6 +101,7 @@ const App: React.FC = () => {
     setScenarios([...scenarios, newScenario]);
     setNewScenarioName('');
     setShowScenarioModal(false);
+    setMobileMenuOpen(false); // Close mobile menu after saving
   };
 
   const handleLoadScenario = (scenario: Scenario) => {
@@ -133,40 +134,77 @@ const App: React.FC = () => {
           <LayoutDashboard className="text-emerald-600" />
           Retirement Planning
         </h1>
-        <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-2 text-slate-600">
+        <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-2 text-slate-600 hover:bg-slate-100 rounded-full transition">
           <Menu size={24} />
         </button>
       </div>
 
-      {/* Mobile Menu Overlay - Scenarios Only */}
+      {/* Mobile Menu Overlay - Scenarios & Save */}
       {mobileMenuOpen && (
          <div className="fixed inset-0 z-50 bg-white p-4 md:hidden overflow-y-auto">
             <div className="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
-               <h2 className="font-bold text-slate-800">Saved Scenarios</h2>
+               <h2 className="font-bold text-xl text-slate-800">Menu</h2>
                <button onClick={() => setMobileMenuOpen(false)} className="text-slate-500 p-2 bg-slate-100 rounded-full hover:bg-slate-200">
-                 <Trash2 className="w-4 h-4 rotate-45" />
+                 <X size={20} />
                  <span className="sr-only">Close</span>
                </button>
             </div>
+            
+            {/* NEW: Save Current Scenario Mobile UI */}
+            <div className="mb-8 bg-emerald-50 rounded-xl p-4 border border-emerald-100 shadow-sm">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-800 mb-3 flex items-center gap-2">
+                <Save size={14} /> Current Simulation
+              </h3>
+              
+              {!showScenarioModal ? (
+                 <button 
+                   onClick={() => setShowScenarioModal(true)}
+                   className="w-full bg-white border border-emerald-200 text-emerald-700 font-bold py-3 rounded-lg text-sm flex items-center justify-center gap-2 shadow-sm hover:bg-emerald-100 transition"
+                 >
+                   <Plus size={18} /> Save as Scenario
+                 </button>
+              ) : (
+                 <div className="animate-fade-in">
+                    <label className="text-xs font-bold text-emerald-700 mb-1 block">Scenario Name</label>
+                    <input 
+                      type="text" 
+                      autoFocus
+                      placeholder="e.g. Retire Early at 55"
+                      value={newScenarioName}
+                      onChange={(e) => setNewScenarioName(e.target.value)}
+                      className="w-full p-3 border border-emerald-300 rounded-lg mb-3 focus:ring-2 focus:ring-emerald-200 outline-none bg-white text-slate-900 text-sm"
+                      onKeyDown={(e) => e.key === 'Enter' && handleSaveScenario()}
+                    />
+                    <div className="flex gap-3">
+                      <button onClick={handleSaveScenario} className="flex-1 bg-emerald-600 text-white text-sm font-bold py-2.5 rounded-lg shadow-md shadow-emerald-200">Save</button>
+                      <button onClick={() => { setShowScenarioModal(false); setNewScenarioName(''); }} className="flex-1 bg-white text-slate-600 border border-slate-200 text-sm font-bold py-2.5 rounded-lg">Cancel</button>
+                    </div>
+                 </div>
+              )}
+            </div>
+
+            <h2 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+              <Layers size={18} className="text-indigo-500" /> Saved Scenarios
+            </h2>
             
             {/* Mobile Scenario List */}
             {scenarios.length > 0 ? (
               <div className="space-y-3">
                 {scenarios.map(s => (
-                  <div key={s.id} className="flex items-center justify-between bg-slate-50 p-3 rounded-lg border border-slate-100">
-                    <button onClick={() => handleLoadScenario(s)} className="text-sm font-medium text-slate-700 text-left flex-1">
+                  <div key={s.id} className="flex items-center justify-between bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                    <button onClick={() => handleLoadScenario(s)} className="text-sm font-bold text-slate-700 text-left flex-1">
                       {s.name}
                     </button>
                     <button onClick={() => handleDeleteScenario(s.id)} className="text-slate-400 hover:text-red-500 p-2">
-                      <Trash2 size={16} />
+                      <Trash2 size={18} />
                     </button>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="text-center py-10 text-slate-400">
-                <p>No saved scenarios.</p>
-                <p className="text-xs mt-2">Use the desktop version to save scenarios.</p>
+              <div className="text-center py-12 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                <p className="text-slate-400 font-medium">No saved scenarios yet.</p>
+                <p className="text-xs text-slate-400 mt-1">Save your current setup above!</p>
               </div>
             )}
          </div>
