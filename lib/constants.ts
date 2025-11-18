@@ -1,5 +1,5 @@
 
-import { InvestmentStrategy, InvestmentStrategyType, UserInput, HistoricalBenchmark } from './types';
+import { InvestmentStrategy, InvestmentStrategyType, UserInput, HistoricalBenchmark, CurrencyCode } from './types';
 
 export const INVESTMENT_STRATEGIES: Record<InvestmentStrategyType, InvestmentStrategy> = {
   [InvestmentStrategyType.CONSERVATIVE]: {
@@ -36,6 +36,12 @@ export const INVESTMENT_STRATEGIES: Record<InvestmentStrategyType, InvestmentStr
   }
 };
 
+export const CURRENCIES: Record<CurrencyCode, { symbol: string, label: string, locale: string }> = {
+  USD: { symbol: '$', label: 'USD ($)', locale: 'en-US' },
+  EUR: { symbol: '€', label: 'EUR (€)', locale: 'de-DE' },
+  GBP: { symbol: '£', label: 'GBP (£)', locale: 'en-GB' },
+};
+
 export const INITIAL_INPUTS: UserInput = {
   currentAge: 35,
   retirementAge: 65,
@@ -51,7 +57,8 @@ export const INITIAL_INPUTS: UserInput = {
   customReturnRate: 7.0,
   inflationRate: 3.0,
   retirementTaxRate: 15.0,
-  monthlyRothContribution: 0
+  monthlyRothContribution: 0,
+  currency: 'USD'
 };
 
 // Approximate Historical Annualized Returns (Nominal with Dividend Reinvestment)

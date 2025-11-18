@@ -1,8 +1,9 @@
+
 import React, { useState } from 'react';
-import { UserInput, InvestmentStrategyType } from '../lib/types';
-import { INVESTMENT_STRATEGIES } from '../lib/constants';
+import { UserInput, InvestmentStrategyType, CurrencyCode } from '../lib/types';
+import { INVESTMENT_STRATEGIES, CURRENCIES } from '../lib/constants';
 import { Tooltip } from './ui/Tooltip';
-import { DollarSign, Percent, PiggyBank, ChevronUp, Lightbulb, AlertCircle, PieChart, Activity, ShieldCheck, TrendingUp } from 'lucide-react';
+import { DollarSign, Euro, PoundSterling, Percent, PiggyBank, ChevronUp, Lightbulb, AlertCircle, PieChart, Activity, ShieldCheck, TrendingUp } from 'lucide-react';
 
 interface InputPanelProps {
   inputs: UserInput;
@@ -12,6 +13,14 @@ interface InputPanelProps {
 export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
   const [showPortfolioSplit, setShowPortfolioSplit] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const CurrencyIcon = ({ className, size }: { className?: string, size?: number }) => {
+    if (inputs.currency === 'EUR') return <Euro className={className} size={size} />;
+    if (inputs.currency === 'GBP') return <PoundSterling className={className} size={size} />;
+    return <DollarSign className={className} size={size} />;
+  };
+
+  const currencySymbol = CURRENCIES[inputs.currency].symbol;
 
   const validateField = (field: keyof UserInput, value: number, allInputs: UserInput): string | null => {
     switch(field) {
@@ -29,6 +38,10 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
       case 'monthlyContribution':
         if (value < 0) return "Contribution cannot be negative.";
         break;
+      case 'monthlyRothContribution':
+        // Enforce Limit (approx 7000/12)
+        if (value > 584) return `Exceeds annual tax-free limit (~${currencySymbol}7,000/yr).`;
+        break;
       case 'inflationRate':
       case 'retirementTaxRate':
         if (value < 0 || value > 100) return "Rate must be 0-100%.";
@@ -37,8 +50,13 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
     return null;
   };
 
-  const handleChange = (field: keyof UserInput, rawValue: string) => {
-    const value = parseFloat(rawValue);
+  const handleChange = (field: keyof UserInput, rawValue: string | CurrencyCode) => {
+    if (field === 'currency') {
+      onChange({ ...inputs, currency: rawValue as CurrencyCode });
+      return;
+    }
+
+    const value = parseFloat(rawValue as string);
     const numValue = isNaN(value) ? 0 : value;
     
     // Construct proposed state for validation
@@ -97,10 +115,10 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
   // Dynamic Tip Logic
   const getFinancialTip = () => {
     if (inputs.currentPortfolio > 0 && inputs.currentRothBalance === 0 && !showPortfolioSplit) {
-      return { title: "Did you know?", text: "If you have a Roth IRA, check 'Split Portfolio' above. Tax-free growth is powerful!" };
+      return { title: "Did you know?", text: "If you have tax-free accounts (like Roth), check 'Split Portfolio' above. Tax-free growth is powerful!" };
     }
     if (inputs.monthlyRothContribution === 0) {
-      return { title: "Diversify Taxes", text: "Consider a Roth. Paying taxes now means tax-free withdrawals later, hedging against future tax hikes." };
+      return { title: "Diversify Taxes", text: "Consider a Roth/Post-Tax account. Paying taxes now means tax-free withdrawals later, hedging against future tax hikes." };
     }
     if (inputs.inflationRate < 2) {
       return { title: "Inflation Reality", text: "Historic inflation is closer to 3%. Planning too low might leave you short." };
@@ -118,9 +136,21 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
       
       {/* Section 1: Profile & Contributions */}
       <section className="space-y-4">
-        <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500 flex items-center">
-          Profile & Contributions
-        </h3>
+        <div className="flex justify-between items-center">
+          <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500">
+            Profile & Contributions
+          </h3>
+          {/* Currency Selector */}
+          <select 
+            value={inputs.currency}
+            onChange={(e) => handleChange('currency', e.target.value)}
+            className="text-xs font-bold bg-slate-100 text-slate-600 border-none rounded px-2 py-1 cursor-pointer hover:bg-slate-200 outline-none focus:ring-1 focus:ring-indigo-300"
+          >
+            {Object.entries(CURRENCIES).map(([code, c]) => (
+              <option key={code} value={code}>{code} ({c.symbol})</option>
+            ))}
+          </select>
+        </div>
         
         {/* Age Inputs */}
         <div className="grid grid-cols-2 gap-4">
@@ -130,7 +160,7 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
               type="number" 
               value={inputs.currentAge}
               onChange={(e) => handleChange('currentAge', e.target.value)}
-              className={`w-full p-2 rounded border outline-none transition ${errors.currentAge ? 'border-red-400 bg-red-50' : 'border-slate-200 focus:ring-2 focus:ring-emerald-500'}`}
+              className={`w-full p-2 rounded border outline-none transition bg-white text-slate-900 ${errors.currentAge ? 'border-red-400 bg-red-50' : 'border-slate-200 focus:ring-2 focus:ring-emerald-500'}`}
             />
             {errors.currentAge && <div className="text-[10px] text-red-500 flex items-center gap-1"><AlertCircle size={10}/> {errors.currentAge}</div>}
           </div>
@@ -140,7 +170,7 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
               type="number" 
               value={inputs.retirementAge}
               onChange={(e) => handleChange('retirementAge', e.target.value)}
-              className={`w-full p-2 rounded border outline-none transition ${errors.retirementAge ? 'border-red-400 bg-red-50' : 'border-slate-200 focus:ring-2 focus:ring-emerald-500'}`}
+              className={`w-full p-2 rounded border outline-none transition bg-white text-slate-900 ${errors.retirementAge ? 'border-red-400 bg-red-50' : 'border-slate-200 focus:ring-2 focus:ring-emerald-500'}`}
             />
              {errors.retirementAge && <div className="text-[10px] text-red-500 flex items-center gap-1"><AlertCircle size={10}/> {errors.retirementAge}</div>}
           </div>
@@ -155,7 +185,7 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
                  onClick={() => setShowPortfolioSplit(true)}
                  className="text-[10px] bg-indigo-50 text-indigo-600 px-2 py-1 rounded hover:bg-indigo-100 transition flex items-center gap-1 font-medium mb-1 border border-indigo-100"
                >
-                 <PieChart size={12}/> Split Roth/Trad
+                 <PieChart size={12}/> Split Tax-Free
                </button>
             )}
           </div>
@@ -164,12 +194,14 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
             
             {/* Main Input */}
             <div className="relative">
-              <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                <CurrencyIcon size={16} />
+              </div>
               <input 
                 type="number" 
                 value={inputs.currentPortfolio}
                 onChange={(e) => handleChange('currentPortfolio', e.target.value)}
-                className="w-full pl-9 p-2 rounded border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none font-semibold text-slate-700"
+                className="w-full pl-9 p-2 rounded border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none font-semibold text-slate-700 bg-white"
                 placeholder="Total Savings"
               />
             </div>
@@ -180,7 +212,7 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
                <div className="mt-4 pt-3 border-t border-slate-100 animate-fade-in">
                  <div className="flex justify-between items-center mb-3">
                     <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
-                      <div className="w-2 h-2 rounded-full bg-emerald-500"></div> Roth Portion
+                      <div className="w-2 h-2 rounded-full bg-emerald-500"></div> Roth/Tax-Free
                     </label>
                     <button 
                       onClick={() => setShowPortfolioSplit(false)} 
@@ -201,20 +233,22 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
                       className="flex-1 h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-emerald-500"
                     />
                     <div className="w-24 text-right relative">
-                       <DollarSign className="absolute left-1 top-1/2 -translate-y-1/2 text-emerald-300" size={12} />
+                       <div className="absolute left-1 top-1/2 -translate-y-1/2 text-emerald-300">
+                         <CurrencyIcon size={12} />
+                       </div>
                        <input 
                           type="number"
                           min="0"
                           max={inputs.currentPortfolio}
                           value={inputs.currentRothBalance || 0}
                           onChange={(e) => handleChange('currentRothBalance', e.target.value)}
-                          className="w-full pl-4 p-1 text-right text-sm font-bold text-emerald-600 border border-slate-200 rounded hover:border-emerald-300 focus:border-emerald-500 outline-none focus:ring-1 focus:ring-emerald-200"
+                          className="w-full pl-4 p-1 text-right text-sm font-bold text-emerald-600 border border-slate-200 rounded hover:border-emerald-300 focus:border-emerald-500 outline-none focus:ring-1 focus:ring-emerald-200 bg-white"
                        />
                     </div>
                  </div>
                  
                  <div className="flex justify-between text-[10px] text-slate-400 mt-1 px-1">
-                    <span>Traditional: ${Math.max(0, inputs.currentPortfolio - (inputs.currentRothBalance || 0))}</span>
+                    <span>Traditional: {currencySymbol}{Math.max(0, inputs.currentPortfolio - (inputs.currentRothBalance || 0))}</span>
                     <span>Roth: {inputs.currentPortfolio > 0 ? Math.round(((inputs.currentRothBalance || 0) / inputs.currentPortfolio) * 100) : 0}%</span>
                  </div>
                </div>
@@ -226,12 +260,14 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
         <div className="space-y-1">
           <label className="text-sm font-medium text-slate-700">Monthly Contribution</label>
           <div className="relative">
-            <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                <CurrencyIcon size={16} />
+            </div>
             <input 
               type="number" 
               value={inputs.monthlyContribution}
               onChange={(e) => handleChange('monthlyContribution', e.target.value)}
-              className="w-full pl-9 p-2 rounded border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none"
+              className="w-full pl-9 p-2 rounded border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none bg-white text-slate-900"
             />
           </div>
           
@@ -239,18 +275,20 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
           <div className="bg-indigo-50/60 p-3 rounded-lg border border-indigo-100 mt-2">
              <div className="flex justify-between items-end mb-2">
                <label className="text-xs font-bold text-indigo-800 uppercase tracking-wider flex items-center gap-1">
-                 <PiggyBank size={12} /> Roth Allocation
+                 <PiggyBank size={12} /> Tax-Free Allocation
                  <Tooltip text="Portion of your monthly contribution that goes into a post-tax Roth account (IRA or 401k). Grows tax-free." />
                </label>
                <div className="text-right leading-tight relative w-24">
-                  <DollarSign className="absolute left-1 top-1/2 -translate-y-1/2 text-indigo-300 pointer-events-none" size={12} />
+                  <div className="absolute left-1 top-1/2 -translate-y-1/2 text-indigo-300 pointer-events-none">
+                     <CurrencyIcon size={12} />
+                  </div>
                   <input 
                     type="number"
                     min="0"
                     max={inputs.monthlyContribution}
                     value={inputs.monthlyRothContribution}
                     onChange={(e) => handleChange('monthlyRothContribution', e.target.value)}
-                    className="w-full pl-4 p-1 text-right text-sm font-bold text-indigo-700 bg-white/50 border border-indigo-100 rounded hover:border-indigo-300 focus:border-indigo-500 outline-none focus:ring-1 focus:ring-indigo-200"
+                    className={`w-full pl-4 p-1 text-right text-sm font-bold text-indigo-700 border rounded outline-none focus:ring-1 focus:ring-indigo-200 bg-white ${errors.monthlyRothContribution ? 'border-red-300' : 'border-indigo-100 hover:border-indigo-300 focus:border-indigo-500'}`}
                   />
                </div>
             </div>
@@ -264,11 +302,13 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
               className="w-full h-2 bg-indigo-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
             />
             <div className="flex justify-between mt-1 items-center">
-              <span className="text-[10px] text-slate-500">Traditional: ${Math.max(0, inputs.monthlyContribution - inputs.monthlyRothContribution)}</span>
-              {inputs.monthlyRothContribution > 584 && (
-                <span className="text-[10px] text-indigo-600 flex items-center gap-1 font-medium">
-                   Roth 401(k) Zone
-                </span>
+              <span className="text-[10px] text-slate-500">Trad: {currencySymbol}{Math.max(0, inputs.monthlyContribution - inputs.monthlyRothContribution)}</span>
+              
+              {/* Display Error or Status */}
+              {errors.monthlyRothContribution ? (
+                 <span className="text-[10px] text-red-500 font-bold">{errors.monthlyRothContribution}</span>
+              ) : (
+                 <span className="text-[10px] text-indigo-400">Max Tax-Free: {currencySymbol}584/mo</span>
               )}
             </div>
           </div>
@@ -314,12 +354,14 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
             </span>
           </label>
           <div className="relative">
-            <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+               <CurrencyIcon size={16} />
+            </div>
             <input 
               type="number" 
               value={inputs.targetValue}
               onChange={(e) => handleChange('targetValue', e.target.value)}
-              className="w-full pl-9 p-2 rounded border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none font-medium text-slate-900"
+              className="w-full pl-9 p-2 rounded border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none font-medium text-slate-900 bg-white"
             />
           </div>
         </div>
@@ -327,7 +369,7 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
         {/* Social Security Input */}
          <div className="space-y-1">
           <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
-            Est. Monthly Social Security
+            Est. Monthly State Pension/SS
             <Tooltip text="Estimated monthly benefit in today's dollars. This reduces the amount you need to withdraw from your portfolio." />
           </label>
           <div className="relative">
@@ -336,7 +378,7 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
               value={inputs.estimatedSocialSecurity}
               onChange={(e) => handleChange('estimatedSocialSecurity', e.target.value)}
               placeholder="e.g. 2000"
-              className="w-full p-2 rounded border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none"
+              className="w-full p-2 rounded border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none bg-white text-slate-900"
             />
           </div>
         </div>
@@ -352,7 +394,7 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
               step="0.1"
               value={inputs.safeWithdrawalRate}
               onChange={(e) => handleChange('safeWithdrawalRate', e.target.value)}
-              className="w-full p-2 pr-8 rounded border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none"
+              className="w-full p-2 pr-8 rounded border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none bg-white text-slate-900"
             />
             <Percent className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
           </div>
@@ -442,7 +484,7 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
                   min="0" max="20" step="0.1"
                   value={inputs.customReturnRate}
                   onChange={(e) => handleChange('customReturnRate', e.target.value)}
-                  className="w-full p-2 rounded border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none pr-8"
+                  className="w-full p-2 rounded border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none pr-8 bg-white text-slate-900"
                 />
                 <Percent className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
               </div>
@@ -482,7 +524,7 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
                 min="0" max="50"
                 value={inputs.retirementTaxRate}
                 onChange={(e) => handleChange('retirementTaxRate', e.target.value)}
-                className="w-full p-2 pr-8 rounded border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none"
+                className="w-full p-2 pr-8 rounded border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none bg-white text-slate-900"
               />
               <Percent className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
            </div>

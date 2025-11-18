@@ -1,7 +1,9 @@
+
 import React, { useState, useMemo } from 'react';
 import { UserInput } from '../lib/types';
+import { CURRENCIES } from '../lib/constants';
 import { growRealToNominal, calculateRequiredContribution, calculateRequiredReturn } from '../lib/financeMath';
-import { Sliders, TrendingUp, DollarSign, Calendar, ShieldCheck } from 'lucide-react';
+import { Sliders, TrendingUp, DollarSign, Euro, PoundSterling, Calendar, ShieldCheck } from 'lucide-react';
 
 interface GoalSandboxProps {
   inputs: UserInput;
@@ -13,6 +15,15 @@ export const GoalSandbox: React.FC<GoalSandboxProps> = ({ inputs }) => {
   const [retirementAge, setRetirementAge] = useState(inputs.retirementAge);
   const [returnRate, setReturnRate] = useState(inputs.strategy === 'Custom' ? inputs.customReturnRate : (inputs.strategy === 'Conservative' ? 4 : inputs.strategy === 'Balanced' ? 6 : 9));
   const [sandboxSS, setSandboxSS] = useState(inputs.estimatedSocialSecurity || 0);
+
+  const currencyConfig = CURRENCIES[inputs.currency];
+  
+  // Dynamic Icon
+  const CurrencyIcon = ({ className, size }: { className?: string, size?: number }) => {
+    if (inputs.currency === 'EUR') return <Euro className={className} size={size} />;
+    if (inputs.currency === 'GBP') return <PoundSterling className={className} size={size} />;
+    return <DollarSign className={className} size={size} />;
+  };
 
   // Safe bounds
   const safeRetirementAge = Math.max(inputs.currentAge + 1, retirementAge);
@@ -62,7 +73,7 @@ export const GoalSandbox: React.FC<GoalSandboxProps> = ({ inputs }) => {
     };
   }, [desiredMonthlyIncome, safeRetirementAge, returnRate, sandboxSS, inputs.currentPortfolio, inputs.monthlyContribution, inputs.inflationRate, inputs.safeWithdrawalRate]);
 
-  const formatCurrency = (val: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(val);
+  const formatCurrency = (val: number) => new Intl.NumberFormat(currencyConfig.locale, { style: 'currency', currency: inputs.currency, maximumFractionDigits: 0 }).format(val);
 
   // Comparison Metrics
   const contributionGap = calculation.requiredContribution - inputs.monthlyContribution;
@@ -94,7 +105,7 @@ export const GoalSandbox: React.FC<GoalSandboxProps> = ({ inputs }) => {
             <div className="space-y-3">
               <div className="flex justify-between items-baseline">
                 <label className="text-sm font-bold text-slate-300 flex items-center gap-2">
-                  <DollarSign size={16} className="text-indigo-400"/> 
+                  <CurrencyIcon size={16} className="text-indigo-400"/> 
                   Desired Monthly Income
                   <span className="text-[10px] bg-indigo-900 text-indigo-300 px-1.5 py-0.5 rounded ml-2">TODAY'S VALUE</span>
                 </label>
@@ -117,7 +128,7 @@ export const GoalSandbox: React.FC<GoalSandboxProps> = ({ inputs }) => {
               <div className="flex justify-between items-baseline">
                 <label className="text-sm font-bold text-slate-300 flex items-center gap-2">
                   <ShieldCheck size={16} className="text-blue-400"/> 
-                  Est. Social Security
+                  Est. State Pension/SS
                 </label>
                 <span className="text-xl font-bold text-white">{formatCurrency(sandboxSS)}</span>
               </div>

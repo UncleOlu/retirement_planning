@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, Suspense, useRef } from 'react';
 import { INITIAL_INPUTS } from './lib/constants';
 import { UserInput, Scenario } from './lib/types';
@@ -222,7 +223,7 @@ const App: React.FC = () => {
                     placeholder="Scenario Name"
                     value={newScenarioName}
                     onChange={(e) => setNewScenarioName(e.target.value)}
-                    className="w-full text-sm p-2 border border-emerald-300 rounded mb-2 focus:ring-2 focus:ring-emerald-200 outline-none"
+                    className="w-full text-sm p-2 border border-emerald-300 rounded mb-2 focus:ring-2 focus:ring-emerald-200 outline-none bg-white text-slate-900"
                     onKeyDown={(e) => e.key === 'Enter' && handleSaveScenario()}
                   />
                   <div className="flex gap-2">
@@ -348,6 +349,7 @@ const App: React.FC = () => {
                         data={result.projections} 
                         isBuyingPowerReal={isBuyingPowerReal} 
                         targetAmount={isBuyingPowerReal ? result.targetReal : result.targetNominal}
+                        currency={inputs.currency}
                       />
                     </div>
                     
@@ -362,6 +364,7 @@ const App: React.FC = () => {
                       <InflationModule 
                           inflationRate={inputs.inflationRate} 
                           retirementYearsAway={inputs.retirementAge - inputs.currentAge} 
+                          currency={inputs.currency}
                       />
                     </div>
                     
@@ -384,9 +387,9 @@ const App: React.FC = () => {
                           <span className="font-mono font-medium text-slate-900">{inputs.retirementTaxRate}%</span>
                         </li>
                          <li className="flex justify-between pb-2 border-b border-slate-50">
-                          <span className="text-slate-600">Social Security</span>
+                          <span className="text-slate-600">State Pension/SS</span>
                           <span className="font-mono font-medium text-slate-900">
-                              {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(inputs.estimatedSocialSecurity)}/mo
+                              {new Intl.NumberFormat('en-US', { style: 'currency', currency: inputs.currency, maximumFractionDigits: 0 }).format(inputs.estimatedSocialSecurity)}/mo
                           </span>
                         </li>
                       </ul>

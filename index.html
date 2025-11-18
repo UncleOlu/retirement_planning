@@ -6,14 +6,6 @@
     <meta name="description" content="Retirement Planning: A secure, client-side financial forecasting tool to visualize your retirement goals in real and nominal dollars.">
     <title>Retirement Planning</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
-    <!-- 
-      DEV NOTE: 
-      Using CDN for immediate preview. 
-      For production deployment (Cost Efficiency):
-      1. Run `npm run build`
-      2. This script will be replaced by optimized CSS in the dist folder.
-    -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -28,17 +20,19 @@
                 '100%': { opacity: '1', transform: 'translateY(0)' },
               }
             }
-          }
-        }
+          },
+        },
       }
     </script>
     <style>
       body { font-family: 'Inter', sans-serif; }
-      /* Custom scrollbar for cleaner look */
-      ::-webkit-scrollbar { width: 8px; }
-      ::-webkit-scrollbar-track { background: #f1f5f9; }
-      ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-      ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+      /* Custom Scrollbar - CDN compatible fallback */
+      .custom-scrollbar::-webkit-scrollbar { width: 8px; }
+      .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+      .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+      .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
   <script type="importmap">
 {

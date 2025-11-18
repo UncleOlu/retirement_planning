@@ -15,6 +15,8 @@ export interface InvestmentStrategy {
   assetMix: string;
 }
 
+export type CurrencyCode = 'USD' | 'EUR' | 'GBP';
+
 export interface UserInput {
   currentAge: number;
   retirementAge: number;
@@ -41,6 +43,9 @@ export interface UserInput {
   // Tax & Roth Strategy
   retirementTaxRate: number; // Percentage (0-50)
   monthlyRothContribution: number; // Portion of monthlyContribution that is Roth
+  
+  // App Settings
+  currency: CurrencyCode;
 }
 
 export interface YearlyProjection {

@@ -2,6 +2,7 @@
 import React from 'react';
 import { SimulationResult, UserInput } from '../lib/types';
 import { CheckCircle, AlertTriangle, TrendingUp, PiggyBank, AlertOctagon } from 'lucide-react';
+import { CURRENCIES } from '../lib/constants';
 
 interface ResultsSummaryProps {
   result: SimulationResult;
@@ -22,10 +23,12 @@ export const ResultsSummary: React.FC<ResultsSummaryProps> = ({ result, inputs, 
     );
   }
 
+  const currencyConfig = CURRENCIES[inputs.currency];
+
   const formatCurrency = (val: number) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat(currencyConfig.locale, {
       style: 'currency',
-      currency: 'USD',
+      currency: inputs.currency,
       maximumFractionDigits: 0,
     }).format(val);
   };
@@ -72,7 +75,7 @@ export const ResultsSummary: React.FC<ResultsSummaryProps> = ({ result, inputs, 
       <div className="flex justify-end mb-2">
         <span className="text-xs font-medium text-slate-400 flex items-center gap-1">
           Showing: <span className={`font-bold ${isBuyingPowerReal ? 'text-emerald-600' : 'text-indigo-600'}`}>
-            {isBuyingPowerReal ? "Purchasing Power (Today's Dollars)" : "Future Value (Nominal Dollars)"}
+            {isBuyingPowerReal ? "Purchasing Power (Today's Value)" : "Future Value (Nominal)"}
           </span>
         </span>
       </div>

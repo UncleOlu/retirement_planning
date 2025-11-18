@@ -2,6 +2,7 @@
 import React, { useMemo } from 'react';
 import { Scenario } from '../lib/types';
 import { runSimulation } from '../lib/financeMath';
+import { CURRENCIES } from '../lib/constants';
 import { Trophy, TrendingUp, Calendar, DollarSign, Percent } from 'lucide-react';
 
 interface ScenarioComparisonProps {
@@ -31,9 +32,12 @@ export const ScenarioComparison: React.FC<ScenarioComparisonProps> = ({ scenario
     );
   }
 
-  const formatCurrency = (val: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(val);
+  const formatCurrency = (val: number, currencyCode: string) => {
+     const config = CURRENCIES[currencyCode as keyof typeof CURRENCIES] || CURRENCIES.USD;
+     return new Intl.NumberFormat(config.locale, { style: 'currency', currency: currencyCode, maximumFractionDigits: 0 }).format(val);
+  };
 
-  // Find winner for highlighting
+  // Find winner for highlighting (Warning: mixing currencies makes finding a "winner" hard, but we assume wealth value is unit agnostic for highlight logic)
   const maxWealth = Math.max(...comparisonData.map(d => d.result.projectedAfterTaxReal));
   const maxIncome = Math.max(...comparisonData.map(d => d.result.projectedIncomeReal));
 
@@ -51,6 +55,7 @@ export const ScenarioComparison: React.FC<ScenarioComparisonProps> = ({ scenario
           {comparisonData.map((item) => {
             const isWealthWinner = item.result.projectedAfterTaxReal === maxWealth;
             const isIncomeWinner = item.result.projectedIncomeReal === maxIncome;
+            const currency = item.inputs.currency || 'USD';
 
             return (
               <div key={item.id} className="w-80 flex flex-col bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden transition hover:shadow-md hover:border-indigo-200 relative">
@@ -74,7 +79,7 @@ export const ScenarioComparison: React.FC<ScenarioComparisonProps> = ({ scenario
                       {isWealthWinner && <Trophy size={14} className="text-amber-500" />}
                     </div>
                     <div className={`text-2xl font-bold ${isWealthWinner ? 'text-emerald-600' : 'text-slate-700'}`}>
-                      {formatCurrency(item.result.projectedAfterTaxReal)}
+                      {formatCurrency(item.result.projectedAfterTaxReal, currency)}
                     </div>
                   </div>
 
@@ -85,7 +90,7 @@ export const ScenarioComparison: React.FC<ScenarioComparisonProps> = ({ scenario
                       {isIncomeWinner && <Trophy size={14} className="text-amber-500" />}
                     </div>
                     <div className={`text-xl font-bold ${isIncomeWinner ? 'text-emerald-600' : 'text-slate-700'}`}>
-                      {formatCurrency(item.result.projectedIncomeReal / 12)}
+                      {formatCurrency(item.result.projectedIncomeReal / 12, currency)}
                     </div>
                   </div>
                   
@@ -99,7 +104,7 @@ export const ScenarioComparison: React.FC<ScenarioComparisonProps> = ({ scenario
                     </div>
                     <div className="flex justify-between">
                       <span className="text-slate-500 flex items-center gap-2"><DollarSign size={14}/> Monthly Contr.</span>
-                      <span className="font-medium text-slate-800">{formatCurrency(item.inputs.monthlyContribution)}</span>
+                      <span className="font-medium text-slate-800">{formatCurrency(item.inputs.monthlyContribution, currency)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-slate-500 flex items-center gap-2"><TrendingUp size={14}/> Return</span>
@@ -113,8 +118,8 @@ export const ScenarioComparison: React.FC<ScenarioComparisonProps> = ({ scenario
                       <span className="font-medium text-slate-800">{item.inputs.retirementTaxRate}%</span>
                     </div>
                      <div className="flex justify-between">
-                      <span className="text-slate-500 flex items-center gap-2 text-indigo-500"><DollarSign size={14}/> Roth Part</span>
-                      <span className="font-medium text-indigo-600">{formatCurrency(item.inputs.monthlyRothContribution)}</span>
+                      <span className="text-slate-500 flex items-center gap-2 text-indigo-500"><DollarSign size={14}/> Tax-Free</span>
+                      <span className="font-medium text-indigo-600">{formatCurrency(item.inputs.monthlyRothContribution, currency)}</span>
                     </div>
                   </div>
 

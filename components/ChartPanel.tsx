@@ -1,19 +1,32 @@
+
 import React from 'react';
-import { YearlyProjection } from '../lib/types';
+import { YearlyProjection, CurrencyCode } from '../lib/types';
+import { CURRENCIES } from '../lib/constants';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 
 interface ChartPanelProps {
   data: YearlyProjection[];
   isBuyingPowerReal: boolean;
   targetAmount: number;
+  currency: CurrencyCode;
 }
 
-export const ChartPanel: React.FC<ChartPanelProps> = ({ data, isBuyingPowerReal, targetAmount }) => {
+export const ChartPanel: React.FC<ChartPanelProps> = ({ data, isBuyingPowerReal, targetAmount, currency }) => {
   
+  const currencyConfig = CURRENCIES[currency];
+
   const formatCurrency = (val: number) => {
-    if (val >= 1000000) return `$${(val / 1000000).toFixed(1)}M`;
-    if (val >= 1000) return `$${(val / 1000).toFixed(0)}k`;
-    return `$${val}`;
+    if (val >= 1000000) {
+       return new Intl.NumberFormat(currencyConfig.locale, { style: 'currency', currency: currency, maximumFractionDigits: 1 }).format(val / 1000000) + 'M';
+    }
+    if (val >= 1000) {
+       return new Intl.NumberFormat(currencyConfig.locale, { style: 'currency', currency: currency, maximumFractionDigits: 0 }).format(val / 1000) + 'k';
+    }
+    return new Intl.NumberFormat(currencyConfig.locale, { style: 'currency', currency: currency, maximumFractionDigits: 0 }).format(val);
+  };
+
+  const tooltipFormatter = (value: number) => {
+     return new Intl.NumberFormat(currencyConfig.locale, { style: 'currency', currency: currency, maximumFractionDigits: 0 }).format(value);
   };
 
   const dataKey = isBuyingPowerReal ? 'balanceReal' : 'balanceNominal';
@@ -62,12 +75,12 @@ export const ChartPanel: React.FC<ChartPanelProps> = ({ data, isBuyingPowerReal,
               tickLine={false}
             />
             <RechartsTooltip 
-              formatter={(value: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(value)}
+              formatter={tooltipFormatter}
               labelFormatter={(label) => `Age: ${label}`}
               contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
             />
             
-            {/* Target Reference Line - Visual approximation based on last data point since Recharts ReferenceLine doesn't take dynamic Y easily without Axis domain tricks, using plotted line instead for better scaling */}
+            {/* Target Reference Line */}
             <Area 
               type="monotone" 
               dataKey={targetLineKey} 
