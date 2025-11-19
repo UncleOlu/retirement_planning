@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { UserInput, InvestmentStrategyType, CurrencyCode } from '../lib/types';
 import { INVESTMENT_STRATEGIES, CURRENCIES } from '../lib/constants';
@@ -327,7 +326,10 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
                  {/* Brokerage Row */}
                  <div>
                    <label className="text-[10px] text-slate-500 font-bold flex justify-between mb-1">
-                      <span>Brokerage (Taxable)</span>
+                      <span className="flex items-center gap-1">
+                        Brokerage (Taxable)
+                        <Tooltip text="Assumes your current balance is the Cost Basis. Future gains will be taxed at Capital Gains rates." />
+                      </span>
                    </label>
                    <div className="flex items-center gap-3">
                       <input 
@@ -428,7 +430,7 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
                     />
                  </div>
                  <div>
-                    <label className="block text-[10px] text-slate-500 mb-1">Brokerage / Savings</label>
+                    <label className="block text-[10px] text-slate-500 mb-1">Brokerage (Stocks/ETF)</label>
                     <CurrencyInput 
                        value={inputs.savingsBrokerage || 0}
                        onChange={(val) => handleContributionBreakdownChange('savingsBrokerage', val)}
@@ -436,7 +438,7 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
                        placeholder="0"
                        symbol={<span className="text-slate-400 text-xs"><CurrencyIcon size={12}/></span>}
                     />
-                    <div className="text-[9px] text-slate-400 mt-0.5">Regular Taxable</div>
+                    <div className="text-[9px] text-slate-400 mt-0.5">Taxable Capital Gains</div>
                  </div>
                </div>
              </div>

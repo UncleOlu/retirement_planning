@@ -237,23 +237,14 @@ export const TaxEstimator: React.FC<TaxEstimatorProps> = ({ currency }) => {
                 
                 <div className="space-y-1 pt-2 border-t border-slate-50">
                    <label className="text-xs font-bold text-slate-700">Other Income / (Loss)</label>
-                   <div className="relative">
-                      <input 
-                         type="text"
-                         value={otherIncome === 0 ? '' : otherIncome}
-                         onChange={(e) => {
-                           // Allow negative numbers
-                           const val = parseInt(e.target.value || '0', 10);
-                           if (!isNaN(val)) setOtherIncome(val);
-                         }}
-                         placeholder="0"
-                         className="w-full p-2 pl-8 text-sm border border-slate-200 rounded text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50"
-                      />
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold pointer-events-none">
-                        {currencyConfig.symbol}
-                      </span>
-                   </div>
-                   <p className="text-[10px] text-slate-400">Business income, rental losses, etc.</p>
+                   <CurrencyInput 
+                      value={otherIncome}
+                      onChange={setOtherIncome}
+                      allowNegative
+                      symbol={currencyConfig.symbol}
+                      className="w-full p-2 pl-8 text-sm border border-slate-200 rounded text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50"
+                   />
+                   <p className="text-[10px] text-slate-400">Business income, rental losses, etc. (Use '-' for loss)</p>
                 </div>
              </div>
            </div>

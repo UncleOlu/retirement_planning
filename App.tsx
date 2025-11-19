@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, Suspense, useRef } from 'react';
 import { INITIAL_INPUTS } from './lib/constants';
 import { UserInput, Scenario } from './lib/types';
@@ -130,6 +129,36 @@ const App: React.FC = () => {
 
   // Determine if we are in the "Main View" (Profile + Dashboard combined)
   const isMainView = activeTab === 'inputs' || activeTab === 'dashboard';
+
+  // Scroll Spy for Mobile: Syncs active tab with scroll position
+  useEffect(() => {
+    // Only run on mobile and in main view
+    if (window.innerWidth >= 768 || !isMainView) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            // We use a threshold of 0.5 (50% visibility)
+            // If profile comes into view, set active tab to inputs
+            if (entry.target === profileRef.current) {
+              setActiveTab('inputs');
+            } 
+            // If dashboard comes into view, set active tab to dashboard
+            else if (entry.target === dashboardRef.current) {
+              setActiveTab('dashboard');
+            }
+          }
+        });
+      },
+      { threshold: 0.4 } // Slightly generous threshold
+    );
+
+    if (profileRef.current) observer.observe(profileRef.current);
+    if (dashboardRef.current) observer.observe(dashboardRef.current);
+
+    return () => observer.disconnect();
+  }, [isMainView]);
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-slate-50">
@@ -393,7 +422,7 @@ const App: React.FC = () => {
             {isMainView ? (
               <>
                 {/* Mobile: Profile Section (Hidden on Desktop) */}
-                <div ref={profileRef} className="md:hidden space-y-6 scroll-mt-20">
+                <div ref={profileRef} className="md:hidden space-y-6 scroll-mt-24 min-h-[50vh]">
                    <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
                       <div className="flex justify-between items-center mb-6">
                          <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
@@ -412,7 +441,7 @@ const App: React.FC = () => {
                 </div>
 
                 {/* Dashboard Section - Ref helps scroll-to on mobile */}
-                <div ref={dashboardRef} className="scroll-mt-20">
+                <div ref={dashboardRef} className="scroll-mt-24 min-h-[80vh]">
                   {/* Mobile View Toggle */}
                   <div className="md:hidden mb-4">
                      <ViewToggle isReal={isBuyingPowerReal} onChange={setIsBuyingPowerReal} className="w-full" />

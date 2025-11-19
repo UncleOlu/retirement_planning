@@ -6,6 +6,7 @@ interface CurrencyInputProps {
   className?: string;
   symbol?: React.ReactNode;
   placeholder?: string;
+  allowNegative?: boolean;
 }
 
 export const CurrencyInput: React.FC<CurrencyInputProps> = ({
@@ -13,7 +14,8 @@ export const CurrencyInput: React.FC<CurrencyInputProps> = ({
   onChange,
   className,
   symbol,
-  placeholder = "0"
+  placeholder = "0",
+  allowNegative = false
 }) => {
   const [isFocused, setIsFocused] = useState(false);
   const [localValue, setLocalValue] = useState(value.toString());
@@ -25,9 +27,26 @@ export const CurrencyInput: React.FC<CurrencyInputProps> = ({
   }, [value, isFocused]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value.replace(/[^0-9]/g, '');
+    let raw = e.target.value;
+    
+    // Regex: If allowNegative, keep digits and hyphen. Else just digits.
+    if (allowNegative) {
+        raw = raw.replace(/[^0-9-]/g, '');
+        // Ensure hyphen is only at the start
+        if (raw.indexOf('-') > 0) {
+            raw = raw.replace(/-/g, '');
+        }
+        // Prevent multiple hyphens
+        if ((raw.match(/-/g) || []).length > 1) {
+             raw = '-';
+        }
+    } else {
+        raw = raw.replace(/[^0-9]/g, '');
+    }
+
     setLocalValue(raw);
-    if (!raw) {
+
+    if (!raw || raw === '-') {
       onChange(0);
     } else {
       onChange(parseInt(raw, 10));
@@ -42,13 +61,15 @@ export const CurrencyInput: React.FC<CurrencyInputProps> = ({
 
   const handleBlur = () => {
       setIsFocused(false);
+      // Force re-render of formatted value
+      setLocalValue(value === 0 ? '' : value.toLocaleString('en-US'));
   };
 
   return (
     <div className="relative w-full">
       <input
         type="text"
-        inputMode="numeric"
+        inputMode={allowNegative ? "text" : "numeric"}
         value={localValue}
         onChange={handleChange}
         onFocus={handleFocus}
