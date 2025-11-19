@@ -1,8 +1,8 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { HISTORICAL_BENCHMARKS } from '../lib/constants';
-import { UserInput, InvestmentStrategyType, SimulationResult } from '../lib/types';
-import { History, AlertTriangle, TrendingUp, AlertOctagon, Hourglass } from 'lucide-react';
+import { UserInput, InvestmentStrategyType, SimulationResult, HistoricalBenchmark } from '../lib/types';
+import { History, AlertTriangle, TrendingUp, AlertOctagon, Hourglass, ChevronDown } from 'lucide-react';
 
 interface RealityCheckProps {
   inputs: UserInput;
@@ -12,26 +12,32 @@ interface RealityCheckProps {
 export const RealityCheck: React.FC<RealityCheckProps> = ({ inputs, result }) => {
   const timeHorizon = inputs.retirementAge - inputs.currentAge;
   
+  // Dynamic Window Selection
+  const [selectedPeriod, setSelectedPeriod] = useState<number>(10);
+  
+  // Auto-select reasonable default on mount based on horizon
+  useEffect(() => {
+    if (timeHorizon >= 30) setSelectedPeriod(30);
+    else if (timeHorizon >= 20) setSelectedPeriod(20);
+    else if (timeHorizon >= 10) setSelectedPeriod(10);
+    else setSelectedPeriod(5);
+  }, [inputs.retirementAge, inputs.currentAge]); // Only re-run if age changes significantly
+  
+  const availablePeriods = [5, 10, 15, 20, 25, 30, 35];
+
   // Determine user's effective rate
   const userRate = inputs.strategy === InvestmentStrategyType.CUSTOM 
     ? inputs.customReturnRate 
     : (inputs.strategy === InvestmentStrategyType.AGGRESSIVE ? 9 : inputs.strategy === InvestmentStrategyType.BALANCED ? 6 : 4);
 
-  // Select best comparison window
-  let windowLabel = "Last 10 Years";
-  let dataKey: 'cagr10' | 'cagr20' | 'cagr30' = 'cagr10';
-
-  if (timeHorizon >= 25) {
-    windowLabel = "Last 30 Years";
-    dataKey = 'cagr30';
-  } else if (timeHorizon >= 15) {
-    windowLabel = "Last 20 Years";
-    dataKey = 'cagr20';
-  }
+  // Get dynamic data key
+  const dataKey = `cagr${selectedPeriod}` as keyof HistoricalBenchmark;
 
   // Check if user is overly optimistic ( > 2% over S&P 500 history)
   const sp500 = HISTORICAL_BENCHMARKS.find(b => b.ticker === 'SPY');
-  const isOptimistic = sp500 && userRate > (sp500[dataKey] + 1.5);
+  // We cast to number to ensure TS knows it's a number (it is defined in interface)
+  const benchmarkVal = sp500 ? (sp500[dataKey] as number) : 10;
+  const isOptimistic = userRate > (benchmarkVal + 1.5);
   
   // Solvency Check
   const runsOutEarly = result.solvencyAge !== null && result.solvencyAge < inputs.lifeExpectancy;
@@ -45,9 +51,20 @@ export const RealityCheck: React.FC<RealityCheckProps> = ({ inputs, result }) =>
           <History className="text-indigo-500" size={20} />
           <h3 className="font-bold text-slate-800">Reality Check</h3>
         </div>
-        <span className="text-xs font-medium px-2 py-1 bg-indigo-100 text-indigo-700 rounded-full">
-          Window: {windowLabel}
-        </span>
+        
+        {/* Dynamic Selector */}
+        <div className="relative group">
+           <select 
+             value={selectedPeriod}
+             onChange={(e) => setSelectedPeriod(Number(e.target.value))}
+             className="appearance-none bg-indigo-100 text-indigo-700 text-xs font-bold py-1.5 pl-3 pr-8 rounded-lg cursor-pointer hover:bg-indigo-200 transition outline-none border border-transparent focus:border-indigo-300"
+           >
+             {availablePeriods.map(p => (
+               <option key={p} value={p}>Last {p} Years</option>
+             ))}
+           </select>
+           <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-indigo-500 pointer-events-none" />
+        </div>
       </div>
 
       <div className="p-6 flex-1 overflow-y-auto custom-scrollbar">
@@ -79,14 +96,14 @@ export const RealityCheck: React.FC<RealityCheckProps> = ({ inputs, result }) =>
         
         {/* Section 2: Growth Comparison */}
         <p className="text-sm text-slate-500 mb-4 leading-relaxed">
-          You're assuming a <strong>{userRate}%</strong> return. Here is how broad market funds performed over the {windowLabel}.
+          You're assuming a <strong>{userRate}%</strong> return. Here is how broad market funds performed over the <strong>Last {selectedPeriod} Years</strong>.
         </p>
 
         {isOptimistic && (
            <div className="mb-6 bg-amber-50 text-amber-800 p-3 rounded-lg text-xs flex items-start gap-2 border border-amber-100">
              <AlertTriangle className="shrink-0 mt-0.5" size={14} />
              <div>
-               <strong>Optimistic Assumption.</strong> Your rate is higher than the S&P 500 average ({sp500?.[dataKey]}%).
+               <strong>Optimistic Assumption.</strong> Your rate is higher than the S&P 500 average ({benchmarkVal}%).
              </div>
            </div>
         )}

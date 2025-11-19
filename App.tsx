@@ -438,13 +438,15 @@ const App: React.FC = () => {
                   </div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
-                    <div className="lg:col-span-2">
-                      <InflationModule 
-                          inflationRate={inputs.inflationRate} 
-                          retirementYearsAway={inputs.retirementAge - inputs.currentAge} 
-                          currency={inputs.currency}
-                      />
-                    </div>
+                    {inputs.retirementAge > inputs.currentAge && (
+                      <div className="lg:col-span-2">
+                        <InflationModule 
+                            inflationRate={inputs.inflationRate} 
+                            retirementYearsAway={inputs.retirementAge - inputs.currentAge} 
+                            currency={inputs.currency}
+                        />
+                      </div>
+                    )}
                     
                     <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm h-full">
                       <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500 mb-4">Assumptions</h3>
@@ -465,7 +467,7 @@ const App: React.FC = () => {
                           <span className="font-mono font-medium text-slate-900">{inputs.retirementTaxRate}%</span>
                         </li>
                          <li className="flex justify-between pb-2 border-b border-slate-50">
-                          <span className="text-slate-600">State Pension/SS</span>
+                          <span className="text-slate-600">Social Security / National Pension</span>
                           <span className="font-mono font-medium text-slate-900">
                               {new Intl.NumberFormat('en-US', { style: 'currency', currency: inputs.currency, maximumFractionDigits: 0 }).format(inputs.estimatedSocialSecurity)}/mo
                           </span>

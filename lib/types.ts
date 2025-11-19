@@ -23,7 +23,16 @@ export interface UserInput {
   lifeExpectancy: number;
   currentPortfolio: number;
   currentRothBalance: number; // New: Portion of currentPortfolio that is Roth
-  monthlyContribution: number;
+  
+  // Aggregate fields used for calculation
+  monthlyContribution: number; 
+  monthlyRothContribution: number; // Portion of monthlyContribution that is Roth
+  
+  // Detailed Contribution Breakdown (New)
+  savingsTrad401k: number;
+  savingsRoth401k: number;
+  savingsRothIRA: number;
+  savingsBrokerage: number;
   
   // New field
   estimatedSocialSecurity: number; // Monthly, in today's dollars
@@ -42,7 +51,6 @@ export interface UserInput {
 
   // Tax & Roth Strategy
   retirementTaxRate: number; // Percentage (0-50)
-  monthlyRothContribution: number; // Portion of monthlyContribution that is Roth
   
   // App Settings
   currency: CurrencyCode;
@@ -97,9 +105,13 @@ export interface HistoricalBenchmark {
   ticker: string;
   name: string;
   description: string;
-  cagr10: number; // 10 year annualized return
-  cagr20: number; // 20 year annualized return
-  cagr30: number; // 30 year annualized return
+  cagr5: number;  // 5 year annualized
+  cagr10: number; // 10 year annualized
+  cagr15: number; // 15 year annualized
+  cagr20: number; // 20 year annualized
+  cagr25: number; // 25 year annualized
+  cagr30: number; // 30 year annualized
+  cagr35: number; // 35 year annualized
   risk: 'Low' | 'Medium' | 'High';
 }
 

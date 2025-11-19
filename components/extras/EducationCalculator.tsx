@@ -2,7 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { CURRENCIES } from '../../lib/constants';
 import { CurrencyCode } from '../../lib/types';
-import { CurrencyInput } from './ExtrasDashboard';
+import { CurrencyInput } from '../ui/CurrencyInput';
 import { GraduationCap, TrendingUp, BookOpen, PiggyBank, AlertTriangle, CheckCircle } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, ReferenceLine, Legend } from 'recharts';
 

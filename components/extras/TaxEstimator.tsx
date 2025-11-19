@@ -3,7 +3,7 @@ import React, { useState, useMemo } from 'react';
 import { CURRENCIES } from '../../lib/constants';
 import { CurrencyCode } from '../../lib/types';
 import { calculateUSFederalTax, STANDARD_DEDUCTION_2025 } from '../../lib/taxMath';
-import { CurrencyInput } from './ExtrasDashboard';
+import { CurrencyInput } from '../ui/CurrencyInput';
 import { Percent, Briefcase, FileCheck, Calculator, Info, CheckCircle2, AlertTriangle, Landmark, Users, TrendingUp, Plus, Minus } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
 

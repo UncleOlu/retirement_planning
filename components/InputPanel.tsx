@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { UserInput, InvestmentStrategyType, CurrencyCode } from '../lib/types';
 import { INVESTMENT_STRATEGIES, CURRENCIES } from '../lib/constants';
 import { Tooltip } from './ui/Tooltip';
-import { DollarSign, Euro, PoundSterling, Percent, PiggyBank, ChevronUp, Lightbulb, AlertCircle, PieChart, Activity, ShieldCheck, TrendingUp } from 'lucide-react';
+import { DollarSign, Euro, PoundSterling, Percent, PiggyBank, ChevronUp, Lightbulb, AlertCircle, PieChart, Activity, ShieldCheck, TrendingUp, Briefcase, Wallet, Landmark } from 'lucide-react';
 
 interface InputPanelProps {
   inputs: UserInput;
@@ -80,8 +80,7 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
         if (value < 0) return "Contribution cannot be negative.";
         break;
       case 'monthlyRothContribution':
-        // Enforce Limit (approx 7000/12)
-        if (value > 584) return `Exceeds annual tax-free limit (~${currencySymbol}7,000/yr).`;
+        // No specific limit validation here as it's aggregate
         break;
       case 'inflationRate':
       case 'retirementTaxRate':
@@ -103,7 +102,7 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
     // Construct proposed state for validation
     const proposedInputs = { ...inputs, [field]: numValue };
     
-    // Efficiency: Enforce constraints immediately to prevent double-renders from effect cycles
+    // Efficiency: Enforce constraints immediately
     if (field === 'currentPortfolio') {
       if (numValue < proposedInputs.currentRothBalance) {
         proposedInputs.currentRothBalance = numValue;
@@ -113,18 +112,6 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
     if (field === 'currentRothBalance') {
        if (numValue > proposedInputs.currentPortfolio) {
          proposedInputs.currentRothBalance = proposedInputs.currentPortfolio;
-       }
-    }
-    
-    if (field === 'monthlyContribution') {
-      if (numValue < proposedInputs.monthlyRothContribution) {
-        proposedInputs.monthlyRothContribution = numValue;
-      }
-    }
-
-    if (field === 'monthlyRothContribution') {
-       if (numValue > proposedInputs.monthlyContribution) {
-         proposedInputs.monthlyRothContribution = proposedInputs.monthlyContribution;
        }
     }
 
@@ -149,25 +136,102 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
     onChange(proposedInputs);
   };
 
+  const handleContributionBreakdownChange = (
+    subField: 'savingsTrad401k' | 'savingsRoth401k' | 'savingsRothIRA' | 'savingsBrokerage',
+    rawValue: string
+  ) => {
+    const val = parseInt(rawValue, 10) || 0;
+    const newInputs = { ...inputs, [subField]: val };
+
+    // Recalculate Aggregates
+    const totalContrib = newInputs.savingsTrad401k + newInputs.savingsRoth401k + newInputs.savingsRothIRA + newInputs.savingsBrokerage;
+    const totalRoth = newInputs.savingsRoth401k + newInputs.savingsRothIRA;
+
+    onChange({
+      ...newInputs,
+      monthlyContribution: totalContrib,
+      monthlyRothContribution: totalRoth
+    });
+  };
+
   const handleStrategyChange = (strategy: InvestmentStrategyType) => {
     onChange({ ...inputs, strategy });
   };
 
   // Dynamic Tip Logic
   const getFinancialTip = () => {
+    const total401k = inputs.savingsTrad401k + inputs.savingsRoth401k;
+    const annual401k = total401k * 12;
+    const annualIRA = inputs.savingsRothIRA * 12;
+    const totalAnnualSavings = inputs.monthlyContribution * 12;
+    
+    // 1. Catch-up Contributions (Age 50+)
+    // 2025 limit is approx $23,500 + $7,500 catchup = $31,000
+    if (inputs.currentAge >= 50) {
+       if (annual401k > 23000 && annual401k < 30000) { 
+         return { 
+           title: "Catch-Up Contributions", 
+           text: "Since you are over 50, you have higher contribution limits. You can add an extra $7,500 to your 401(k) annually. Use this catch-up allowance!" 
+         };
+       }
+    }
+
+    // 2. Backdoor Roth Strategy (High Income Proxy via Savings)
+    // If user is saving significantly (> $6k/yr in IRA) but explicitly NOT using Roth IRA (maybe they think they can't?)
+    // OR if they are using Roth IRA but might be over limit.
+    // Let's provide a tip if they have high savings but low Roth IRA, or just general high savings info.
+    if (totalAnnualSavings > 30000 && inputs.savingsRothIRA === 0) {
+      return { 
+        title: "Backdoor Roth Strategy", 
+        text: "High earner? If you're phased out of direct Roth IRA contributions due to income limits, consider a 'Backdoor Roth': Contribute to a Traditional IRA (non-deductible) and convert it to Roth." 
+      };
+    }
+
+    // 3. Brokerage Efficiency
+    // If putting money in brokerage but haven't maxed 401k (approx $23,500)
+    if (inputs.savingsBrokerage > 0 && annual401k < 23500) {
+      return { 
+        title: "Maximize Tax-Advantaged Space", 
+        text: "You are funding a taxable brokerage account but haven't maxed your 401(k). Consider filling tax-advantaged buckets first to reduce your tax drag." 
+      };
+    }
+
+    // 4. Mega Backdoor Roth
+    // If maxing 401k and still saving in brokerage
+    if (annual401k >= 23000 && inputs.savingsBrokerage > 500) {
+       return {
+         title: "Mega Backdoor Roth",
+         text: "Maxed out your 401(k)? Check if your employer plan offers 'After-Tax' contributions with in-service withdrawals. This allows you to contribute up to ~$69k total into tax-advantaged space."
+       }
+    }
+
+    // 5. HSA
+    // Suggest HSA if age is appropriate and they are saving well
+    if (inputs.currentAge < 65 && inputs.monthlyContribution > 500) {
+       // Rotation check or simple static check based on other fields
+       if (inputs.monthlyContribution % 100 !== 0) { // Arbitrary deterministic check to vary tips
+         return { 
+            title: "The Triple Tax Threat", 
+            text: "Don't forget the Health Savings Account (HSA). It offers tax-deductible contributions, tax-free growth, and tax-free withdrawals for medical expenses. It's a stealth retirement account." 
+         };
+       }
+    }
+
+    // 6. Standard Checks
     if (inputs.currentPortfolio > 0 && inputs.currentRothBalance === 0 && !showPortfolioSplit) {
       return { title: "Did you know?", text: "If you have tax-free accounts (like Roth), check 'Split Portfolio' above. Tax-free growth is powerful!" };
     }
-    if (inputs.monthlyRothContribution === 0) {
+    
+    if (inputs.monthlyRothContribution === 0 && inputs.monthlyContribution > 0) {
       return { title: "Diversify Taxes", text: "Consider a Roth/Post-Tax account. Paying taxes now means tax-free withdrawals later, hedging against future tax hikes." };
     }
-    if (inputs.inflationRate < 2) {
-      return { title: "Inflation Reality", text: "Historic inflation is closer to 3%. Planning too low might leave you short." };
-    }
+    
     if (inputs.safeWithdrawalRate > 4.5) {
-      return { title: "Withdrawal Risk", text: "A rate above 4.5% significantly increases the risk of outliving your money during downturns." };
+      return { title: "Withdrawal Risk", text: "A rate above 4.5% significantly increases the risk of outliving your money during downturns. Most planners suggest 3% - 4%." };
     }
-    return { title: "Compounding Power", text: "The biggest factor in your success is Time. Starting even 1 year earlier can make a massive difference." };
+
+    // Fallback
+    return { title: "Compounding Power", text: "The biggest factor in your success is Time. Investing $1,000/mo starting at 25 yields 2x more than starting at 35." };
   };
 
   const tip = getFinancialTip();
@@ -293,57 +357,89 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
           </div>
         </div>
 
-        {/* Monthly Contribution & Roth Split */}
-        <div className="space-y-1">
-          <label className="text-sm font-medium text-slate-700">Monthly Contribution</label>
-          <div className="relative">
-            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-                <CurrencyIcon size={16} />
-            </div>
-            <MoneyInput 
-              value={inputs.monthlyContribution}
-              onChange={(val) => handleChange('monthlyContribution', val)}
-              className="w-full pl-9 p-2 rounded border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none bg-white text-slate-900"
-            />
+        {/* Monthly Contribution Breakdown */}
+        <div className="space-y-3">
+          <div className="flex justify-between items-end">
+             <label className="text-sm font-medium text-slate-700">Monthly Contribution</label>
+             <div className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded border border-indigo-100">
+               Total: {currencySymbol}{inputs.monthlyContribution.toLocaleString()}
+             </div>
           </div>
           
-          {/* Roth Strategy Nested */}
-          <div className="bg-indigo-50/60 p-3 rounded-lg border border-indigo-100 mt-2">
-             <div className="flex justify-between items-end mb-2">
-               <label className="text-xs font-bold text-indigo-800 uppercase tracking-wider flex items-center gap-1">
-                 <PiggyBank size={12} /> Tax-Free Allocation
-                 <Tooltip text="Portion of your monthly contribution that goes into a post-tax Roth account (IRA or 401k). Grows tax-free." />
-               </label>
-               <div className="text-right leading-tight relative w-24">
-                  <div className="absolute left-1 top-1/2 -translate-y-1/2 text-indigo-300 pointer-events-none">
-                     <CurrencyIcon size={12} />
-                  </div>
-                  <MoneyInput 
-                    value={inputs.monthlyRothContribution}
-                    onChange={(val) => handleChange('monthlyRothContribution', val)}
-                    className={`w-full pl-4 p-1 text-right text-sm font-bold text-indigo-700 border rounded outline-none focus:ring-1 focus:ring-indigo-200 bg-white ${errors.monthlyRothContribution ? 'border-red-300' : 'border-indigo-100 hover:border-indigo-300 focus:border-indigo-500'}`}
-                  />
+          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-4">
+             
+             {/* Work Retirement */}
+             <div>
+               <div className="flex items-center gap-2 mb-2">
+                 <Briefcase size={14} className="text-slate-400" />
+                 <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Employer Plans</span>
                </div>
-            </div>
-            <input 
-              type="range" 
-              min="0" 
-              max={inputs.monthlyContribution}
-              step="10"
-              value={inputs.monthlyRothContribution}
-              onChange={(e) => handleChange('monthlyRothContribution', e.target.value)}
-              className="w-full h-2 bg-indigo-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
-            />
-            <div className="flex justify-between mt-1 items-center">
-              <span className="text-[10px] text-slate-500">Trad: {currencySymbol}{Math.max(0, inputs.monthlyContribution - inputs.monthlyRothContribution).toLocaleString()}</span>
-              
-              {/* Display Error or Status */}
-              {errors.monthlyRothContribution ? (
-                 <span className="text-[10px] text-red-500 font-bold">{errors.monthlyRothContribution}</span>
-              ) : (
-                 <span className="text-[10px] text-indigo-400">Max Tax-Free: {currencySymbol}584/mo</span>
-              )}
-            </div>
+               <div className="grid grid-cols-2 gap-3">
+                 <div>
+                    <label className="block text-[10px] text-slate-500 mb-1">Traditional 401k/403b</label>
+                    <div className="relative">
+                       <div className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-xs"><CurrencyIcon size={12}/></div>
+                       <MoneyInput 
+                          value={inputs.savingsTrad401k || 0}
+                          onChange={(val) => handleContributionBreakdownChange('savingsTrad401k', val)}
+                          className="w-full pl-6 p-1.5 text-sm border border-slate-200 rounded focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50"
+                          placeholder="0"
+                       />
+                    </div>
+                    <div className="text-[9px] text-slate-400 mt-0.5">Pre-Tax</div>
+                 </div>
+                 <div>
+                    <label className="block text-[10px] text-emerald-600 mb-1">Roth 401k/403b</label>
+                     <div className="relative">
+                       <div className="absolute left-2 top-1/2 -translate-y-1/2 text-emerald-300 text-xs"><CurrencyIcon size={12}/></div>
+                       <MoneyInput 
+                          value={inputs.savingsRoth401k || 0}
+                          onChange={(val) => handleContributionBreakdownChange('savingsRoth401k', val)}
+                          className="w-full pl-6 p-1.5 text-sm border border-emerald-100 rounded focus:ring-2 focus:ring-emerald-500 outline-none bg-emerald-50 text-emerald-800 font-medium"
+                          placeholder="0"
+                       />
+                    </div>
+                    <div className="text-[9px] text-emerald-500 mt-0.5">Tax-Free Growth</div>
+                 </div>
+               </div>
+             </div>
+
+             <div className="border-t border-slate-100"></div>
+
+             {/* Personal Retirement */}
+             <div>
+               <div className="flex items-center gap-2 mb-2">
+                 <PiggyBank size={14} className="text-slate-400" />
+                 <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Individual Accounts</span>
+               </div>
+               <div className="grid grid-cols-2 gap-3">
+                 <div>
+                    <label className="block text-[10px] text-emerald-600 mb-1">Roth IRA / Backdoor</label>
+                    <div className="relative">
+                       <div className="absolute left-2 top-1/2 -translate-y-1/2 text-emerald-300 text-xs"><CurrencyIcon size={12}/></div>
+                       <MoneyInput 
+                          value={inputs.savingsRothIRA || 0}
+                          onChange={(val) => handleContributionBreakdownChange('savingsRothIRA', val)}
+                          className="w-full pl-6 p-1.5 text-sm border border-emerald-100 rounded focus:ring-2 focus:ring-emerald-500 outline-none bg-emerald-50 text-emerald-800 font-medium"
+                          placeholder="0"
+                       />
+                    </div>
+                 </div>
+                 <div>
+                    <label className="block text-[10px] text-slate-500 mb-1">Brokerage / Savings</label>
+                     <div className="relative">
+                       <div className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-xs"><CurrencyIcon size={12}/></div>
+                       <MoneyInput 
+                          value={inputs.savingsBrokerage || 0}
+                          onChange={(val) => handleContributionBreakdownChange('savingsBrokerage', val)}
+                          className="w-full pl-6 p-1.5 text-sm border border-slate-200 rounded focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50"
+                          placeholder="0"
+                       />
+                    </div>
+                    <div className="text-[9px] text-slate-400 mt-0.5">Regular Taxable</div>
+                 </div>
+               </div>
+             </div>
           </div>
         </div>
       </section>
@@ -401,15 +497,18 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
         {/* Social Security Input */}
          <div className="space-y-1">
           <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
-            Est. Monthly State Pension/SS
-            <Tooltip text="Estimated monthly benefit in today's dollars. This reduces the amount you need to withdraw from your portfolio." />
+            Social Security / National Pension
+            <Tooltip text="Estimated monthly government benefit in today's dollars. This reduces the amount you need to withdraw from your portfolio." />
           </label>
           <div className="relative">
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+               <CurrencyIcon size={16} />
+            </div>
             <MoneyInput 
               value={inputs.estimatedSocialSecurity}
               onChange={(val) => handleChange('estimatedSocialSecurity', val)}
               placeholder="e.g. 2000"
-              className="w-full p-2 rounded border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none bg-white text-slate-900"
+              className="w-full pl-9 p-2 rounded border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none bg-white text-slate-900"
             />
           </div>
         </div>

@@ -7,49 +7,6 @@ import { TaxEstimator } from './TaxEstimator';
 import { EducationCalculator } from './EducationCalculator';
 import { CurrencyCode } from '../../lib/types';
 
-// --- Shared Component Export ---
-// Reusing this across extra tools for consistency
-export const CurrencyInput = ({ 
-  value, 
-  onChange, 
-  className,
-  symbol
-}: { 
-  value: number; 
-  onChange: (val: number) => void; 
-  className?: string;
-  symbol?: string;
-}) => {
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Remove non-digits
-    const raw = e.target.value.replace(/[^0-9]/g, '');
-    if (!raw) {
-      onChange(0);
-    } else {
-      onChange(parseInt(raw, 10));
-    }
-  };
-
-  return (
-    <div className="relative w-full">
-      <input
-        type="text"
-        inputMode="numeric"
-        value={value === 0 ? '' : value.toLocaleString('en-US')} 
-        onChange={handleChange}
-        placeholder="0"
-        className={className}
-      />
-      {symbol && (
-         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold pointer-events-none">
-            {symbol}
-         </span>
-      )}
-    </div>
-  );
-};
-// ------------------------------
-
 interface ExtrasDashboardProps {
   currency: CurrencyCode;
 }

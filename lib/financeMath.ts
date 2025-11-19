@@ -112,17 +112,14 @@ export const runSimulation = (inputs: UserInput): SimulationResult => {
   const yearsInRetirement = inputs.lifeExpectancy - inputs.retirementAge;
   const withdrawRate = inputs.safeWithdrawalRate / 100;
   const taxRate = (inputs.retirementTaxRate || 0) / 100;
-
-  // Roth Contribution logic: We now trust the input (capped at total contribution by UI)
-  // This allows for Roth 401(k) scenarios where limit is > $7000
-  const effectiveRothContribution = Math.min(inputs.monthlyRothContribution, inputs.monthlyContribution);
-  const effectiveTradContribution = Math.max(0, inputs.monthlyContribution - effectiveRothContribution);
+  const CAP_GAINS_RATE = 0.15; // Assumed Long Term Capital Gains Rate
 
   // 1. Validation
-  if (yearsToRetirement <= 0) {
-    return {
+  if (yearsToRetirement < 0) {
+     // Allow 0 for "Just Retired"
+     return {
       isValid: false,
-      validationError: "Retirement age must be greater than current age.",
+      validationError: "Retirement age cannot be in the past.",
       yearsToRetirement: 0,
       yearsInRetirement: 0,
       projectedNominal: 0, projectedReal: 0, targetNominal: 0, targetReal: 0,
@@ -132,8 +129,29 @@ export const runSimulation = (inputs: UserInput): SimulationResult => {
     };
   }
 
+  // Contribution Routing
+  // Explicit buckets based on user input
+  const contribRoth = inputs.savingsRoth401k + inputs.savingsRothIRA;
+  const contribBrokerage = inputs.savingsBrokerage;
+  const contribTrad = inputs.savingsTrad401k; 
+  // Note: We prioritize explicit breakdown. If breakdown is 0 but total > 0 (legacy/fallback), we default to Trad.
+  // But InputPanel ensures sync, so we trust specific fields if they sum > 0.
+  
+  const breakdownSum = contribRoth + contribBrokerage + contribTrad;
+  
+  // Fallback Logic if user used the main slider but not the detailed inputs (legacy support or direct edit)
+  // If the detailed buckets are 0, but monthlyContribution is > 0, allocate based on legacy logic
+  let effectiveRoth = contribRoth;
+  let effectiveBrokerage = contribBrokerage;
+  let effectiveTrad = contribTrad;
+
+  if (breakdownSum === 0 && inputs.monthlyContribution > 0) {
+      effectiveRoth = Math.min(inputs.monthlyRothContribution, inputs.monthlyContribution);
+      effectiveTrad = Math.max(0, inputs.monthlyContribution - effectiveRoth);
+      effectiveBrokerage = 0;
+  }
+
   // 2. Determine Targets
-  // Social Security is usually partially taxable, but for simplicity we treat it as Net Income here
   const ssAnnualReal = (inputs.estimatedSocialSecurity || 0) * 12;
 
   let targetIncomeReal = 0; // Spendable (After-Tax) Goal
@@ -141,14 +159,8 @@ export const runSimulation = (inputs: UserInput): SimulationResult => {
   if (inputs.targetType === 'income') {
     targetIncomeReal = inputs.targetValue;
   } else {
-    // If target is Portfolio Value, we assume that's the GROSS portfolio they want.
-    // We convert that to a Real Income estimate.
     const targetPortfolioNominal = inputs.targetValue;
     const targetPortfolioReal = adjustFutureToReal(targetPortfolioNominal, inflationRate, yearsToRetirement);
-    
-    // How much income does this generate?
-    // We assume this portfolio is Traditional (Taxable) for the "Goal" definition to be safe.
-    // Net Income = (Portfolio * SafeRate) * (1 - TaxRate) + SS
     const grossPortfolioIncome = targetPortfolioReal * withdrawRate;
     const netPortfolioIncome = grossPortfolioIncome * (1 - taxRate);
     targetIncomeReal = netPortfolioIncome + ssAnnualReal;
@@ -157,11 +169,15 @@ export const runSimulation = (inputs: UserInput): SimulationResult => {
   // 3. Simulation Setup
   const projections: YearlyProjection[] = [];
   
-  // Buckets Initialization
-  // Safely split current portfolio. Ensure we don't have more Roth than Total Portfolio.
+  // Current Balance Buckets
+  // We assume Current Portfolio is split purely between Trad and Roth for simplicity 
+  // (unless we added a Current Brokerage input, which we haven't yet). 
+  // So existing Brokerage balances are effectively treated as Traditional (Taxable) which is conservative.
   const safeCurrentRoth = Math.min(inputs.currentRothBalance || 0, inputs.currentPortfolio);
   let balanceRoth = safeCurrentRoth;
   let balanceTrad = Math.max(0, inputs.currentPortfolio - safeCurrentRoth);
+  let balanceBrokerage = 0; 
+  let basisBrokerage = 0; // Tracks principal for tax calculations
 
   let totalContributions = 0;
   let solvencyAge: number | null = null;
@@ -183,16 +199,19 @@ export const runSimulation = (inputs: UserInput): SimulationResult => {
     
     // Snapshot
     if (m % 12 === 0) {
-      const totalNominal = balanceTrad + balanceRoth;
+      const totalNominal = balanceTrad + balanceRoth + balanceBrokerage;
       
       // Calculate After-Tax Value (Liquidation Value)
-      // If we liquidated everything today: Roth is free, Trad is taxed.
-      const totalAfterTaxNominal = balanceRoth + (balanceTrad * (1 - taxRate));
-      // const totalAfterTaxReal = adjustFutureToReal(totalAfterTaxNominal, inflationRate, currentYearIndex);
+      // Roth: 100%
+      // Trad: 100% * (1 - taxRate)
+      // Brokerage: Basis + (Gains * (1 - CAP_GAINS_RATE))
+      const brokerageGains = Math.max(0, balanceBrokerage - basisBrokerage);
+      const brokerageAfterTax = basisBrokerage + (brokerageGains * (1 - CAP_GAINS_RATE));
+      
+      const totalAfterTaxNominal = balanceRoth + brokerageAfterTax + (balanceTrad * (1 - taxRate));
       
       // Reference Target Lines
       const incomeGapReal = Math.max(0, targetIncomeReal - ssAnnualReal);
-      // Required Portfolio to generate this Net Income from a traditional source
       const requiredTradPortfolioReal = incomeGapReal / (withdrawRate * (1 - taxRate));
       const requiredTradPortfolioNominal = growRealToNominal(requiredTradPortfolioReal, inflationRate, yearsToRetirement);
 
@@ -210,14 +229,19 @@ export const runSimulation = (inputs: UserInput): SimulationResult => {
 
     if (!isRetired) {
        // Accumulation
-       balanceTrad += balanceTrad * monthlyRate + effectiveTradContribution;
-       balanceRoth += balanceRoth * monthlyRate + effectiveRothContribution;
+       balanceTrad += balanceTrad * monthlyRate + effectiveTrad;
+       balanceRoth += balanceRoth * monthlyRate + effectiveRoth;
+       
+       balanceBrokerage += balanceBrokerage * monthlyRate + effectiveBrokerage;
+       basisBrokerage += effectiveBrokerage;
+
        totalContributions += inputs.monthlyContribution;
     } else {
        // Drawdown
        // Growth first
        balanceTrad += balanceTrad * monthlyRate;
        balanceRoth += balanceRoth * monthlyRate;
+       balanceBrokerage += balanceBrokerage * monthlyRate;
 
        // Withdrawal
        const monthsSinceRetirement = m - retirementMonthIndex;
@@ -225,7 +249,8 @@ export const runSimulation = (inputs: UserInput): SimulationResult => {
        
        let remainingCashNeeded = nominalSpendableNeeded;
        
-       // 1. Try Traditional (Taxable)
+       // Strategy: Burn Taxable (Trad) -> Brokerage -> Roth
+       // 1. Try Traditional (Taxable Income)
        const grossWithdrawalNeeded = remainingCashNeeded / (1 - taxRate);
        
        if (balanceTrad >= grossWithdrawalNeeded) {
@@ -238,7 +263,34 @@ export const runSimulation = (inputs: UserInput): SimulationResult => {
          remainingCashNeeded -= cashFromTrad;
        }
        
-       // 2. Try Roth (Tax Free)
+       // 2. Try Brokerage (Cap Gains)
+       if (remainingCashNeeded > 0) {
+          // Estimate tax drag on brokerage withdrawal
+          // Simplified: We assume the withdrawal has the same basis/gain ratio as the whole account
+          // cashNeeded = grossWithdrawal - tax
+          // tax = (grossWithdrawal * gainRatio) * CapGainsRate
+          const totalBrok = balanceBrokerage;
+          if (totalBrok > 0) {
+             const gainRatio = Math.max(0, (balanceBrokerage - basisBrokerage) / balanceBrokerage);
+             const effectiveTaxDrag = gainRatio * CAP_GAINS_RATE;
+             const grossBrokNeeded = remainingCashNeeded / (1 - effectiveTaxDrag);
+
+             if (balanceBrokerage >= grossBrokNeeded) {
+               balanceBrokerage -= grossBrokNeeded;
+               // Reduce basis proportionally
+               basisBrokerage -= (grossBrokNeeded * (1 - gainRatio)); 
+               remainingCashNeeded = 0;
+             } else {
+               // Take all Brokerage
+               const cashFromBrok = balanceBrokerage * (1 - effectiveTaxDrag);
+               balanceBrokerage = 0;
+               basisBrokerage = 0;
+               remainingCashNeeded -= cashFromBrok;
+             }
+          }
+       }
+
+       // 3. Try Roth (Tax Free)
        if (remainingCashNeeded > 0) {
          if (balanceRoth >= remainingCashNeeded) {
            balanceRoth -= remainingCashNeeded;
@@ -257,42 +309,51 @@ export const runSimulation = (inputs: UserInput): SimulationResult => {
     }
   }
 
-  // Final Retirement Snapshot
+  // Final Snapshot for Summary
   const retirementProj = projections.find(p => p.age === inputs.retirementAge);
   const finalGrossNominal = retirementProj ? retirementProj.balanceNominal : 0;
   const finalGrossReal = retirementProj ? retirementProj.balanceReal : 0;
 
-  // Re-calculate split at retirement for income projection
-  // We can't just use the loop vars because loop goes to death
-  // We need the values at 'retirementMonthIndex'
-  // Since we didn't store split in projection array, let's simulate just accumulation again quickly?
-  // Or better, just add split to Projection object? For now, let's approximate ratio based on accumulation.
-  // Actually, let's just re-run accumulation phase math to get exact split.
+  // Re-run accumulation to get exact buckets at retirement for snapshot
+  // (Or we could store them in projection, but keeping types simple)
+  // We will just approximate liquidation value logic based on end of sim loop if retired, 
+  // but wait, loop goes to LifeExpectancy. We need value AT retirement.
+  // Let's just use the logic derived inside the loop (snapshots).
+  
+  // We need to find the liquidation value at retirement age specifically
+  // We can re-calculate it using the retirementProj balance if we knew the split.
+  // Since we don't store split in YearlyProjection, we do a quick fast-forward calc:
   let rTrad = Math.max(0, inputs.currentPortfolio - safeCurrentRoth);
   let rRoth = safeCurrentRoth;
+  let rBrok = 0;
+  let rBasisBrok = 0;
   const accumMonths = yearsToRetirement * 12;
   for(let i=0; i<accumMonths; i++) {
-      rTrad += rTrad * monthlyRate + effectiveTradContribution;
-      rRoth += rRoth * monthlyRate + effectiveRothContribution;
+      rTrad += rTrad * monthlyRate + effectiveTrad;
+      rRoth += rRoth * monthlyRate + effectiveRoth;
+      rBrok += rBrok * monthlyRate + effectiveBrokerage;
+      rBasisBrok += effectiveBrokerage;
   }
-  const finalTradBal = rTrad;
-  const finalRothBal = rRoth;
-
-  const safeIncomeTrad = finalTradBal * withdrawRate * (1 - taxRate);
-  const safeIncomeRoth = finalRothBal * withdrawRate; // Tax free
   
-  const projectedNetIncomeNominal = safeIncomeTrad + safeIncomeRoth + growRealToNominal(ssAnnualReal, inflationRate, yearsToRetirement);
-  const projectedNetIncomeReal = adjustFutureToReal(projectedNetIncomeNominal, inflationRate, yearsToRetirement);
-  
-  // Calculate Liquidation Value (After Tax Portfolio)
-  const liquidationNominal = finalRothBal + (finalTradBal * (1 - taxRate));
+  const finalBrokGains = Math.max(0, rBrok - rBasisBrok);
+  const finalBrokNet = rBasisBrok + (finalBrokGains * (1 - CAP_GAINS_RATE));
+  const liquidationNominal = rRoth + finalBrokNet + (rTrad * (1 - taxRate));
   const liquidationReal = adjustFutureToReal(liquidationNominal, inflationRate, yearsToRetirement);
 
-  // Target Calculation for Comparison
+  // Estimate Income Generation Potential
+  // Net Income = (Trad * SafeRate * (1-Tax)) + (Roth * SafeRate) + (Brok * SafeRate * (1 - EffectiveDrag))
+  const brokDrag = (rBrok > 0 ? ((rBrok - rBasisBrok)/rBrok) : 0) * CAP_GAINS_RATE;
+  
+  const safeIncomeTrad = rTrad * withdrawRate * (1 - taxRate);
+  const safeIncomeRoth = rRoth * withdrawRate;
+  const safeIncomeBrok = rBrok * withdrawRate * (1 - brokDrag);
+  
+  const projectedNetIncomeNominal = safeIncomeTrad + safeIncomeRoth + safeIncomeBrok + growRealToNominal(ssAnnualReal, inflationRate, yearsToRetirement);
+  const projectedNetIncomeReal = adjustFutureToReal(projectedNetIncomeNominal, inflationRate, yearsToRetirement);
+  
   const targetNominal = growRealToNominal(targetIncomeReal, inflationRate, yearsToRetirement); 
-
   const incomeGap = projectedNetIncomeReal - targetIncomeReal;
-  const isOnTrack = incomeGap > -100; // $100 tolerance
+  const isOnTrack = incomeGap > -100; 
 
   return {
     isValid: true,

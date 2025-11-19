@@ -48,7 +48,16 @@ export const INITIAL_INPUTS: UserInput = {
   lifeExpectancy: 90,
   currentPortfolio: 50000,
   currentRothBalance: 0,
+  
   monthlyContribution: 1000,
+  monthlyRothContribution: 0,
+  
+  // Detailed Breakdown Defaults
+  savingsTrad401k: 1000,
+  savingsRoth401k: 0,
+  savingsRothIRA: 0,
+  savingsBrokerage: 0,
+
   estimatedSocialSecurity: 2000, 
   targetType: 'income',
   targetValue: 60000, 
@@ -57,7 +66,6 @@ export const INITIAL_INPUTS: UserInput = {
   customReturnRate: 7.0,
   inflationRate: 3.0,
   retirementTaxRate: 15.0,
-  monthlyRothContribution: 0,
   currency: 'USD'
 };
 
@@ -68,45 +76,65 @@ export const HISTORICAL_BENCHMARKS: HistoricalBenchmark[] = [
     ticker: 'SPY',
     name: 'S&P 500 (Large Cap)',
     description: 'The 500 largest US companies. The standard benchmark for US equities.',
+    cagr5: 15.0,
     cagr10: 12.5,
+    cagr15: 13.8,
     cagr20: 10.2,
+    cagr25: 7.8, // Includes dot-com crash/recovery
     cagr30: 10.7,
+    cagr35: 10.9,
     risk: 'High'
   },
   {
     ticker: 'QQQ',
     name: 'Nasdaq-100 (Tech/Growth)',
     description: 'Top 100 non-financial companies on Nasdaq. Heavy tech focus.',
+    cagr5: 21.0,
     cagr10: 17.8,
+    cagr15: 18.5,
     cagr20: 14.5,
+    cagr25: 10.5, // Volatile start 2000s
     cagr30: 14.2,
+    cagr35: 13.5, // Approx long term tech growth
     risk: 'High'
   },
   {
     ticker: 'VTI',
     name: 'Total US Stock Market',
     description: 'Entire US equity market including small and mid-cap stocks.',
+    cagr5: 14.5,
     cagr10: 12.1,
+    cagr15: 13.2,
     cagr20: 10.4,
+    cagr25: 8.1,
     cagr30: 10.5,
+    cagr35: 10.6,
     risk: 'High'
   },
   {
     ticker: 'VXUS',
     name: 'Total Intl Stock',
     description: 'Global markets excluding the US. Provides geographic diversification.',
+    cagr5: 7.2,
     cagr10: 4.8,
+    cagr15: 4.5,
     cagr20: 5.5,
-    cagr30: 6.2, // Estimate based on EAFE/Emerging blends
+    cagr25: 4.9,
+    cagr30: 6.2, 
+    cagr35: 5.8,
     risk: 'High'
   },
   {
     ticker: 'BND',
     name: 'Total Bond Market',
     description: 'US Investment Grade Bonds. Used for capital preservation and income.',
+    cagr5: 0.5,
     cagr10: 1.8,
+    cagr15: 2.5,
     cagr20: 3.2,
+    cagr25: 3.8,
     cagr30: 4.6, 
+    cagr35: 5.1,
     risk: 'Low'
   }
 ];
