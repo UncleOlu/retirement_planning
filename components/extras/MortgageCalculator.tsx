@@ -14,12 +14,14 @@ const CurrencyInput = ({
   value, 
   onChange, 
   className,
-  symbol
+  symbol,
+  placeholder = "0"
 }: { 
   value: number; 
   onChange: (val: number) => void; 
   className?: string;
   symbol?: string;
+  placeholder?: string;
 }) => {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     // Remove non-digits (keeping it integer-only for simplicity in this context)
@@ -39,7 +41,7 @@ const CurrencyInput = ({
         // Display empty if 0 to allow cleaner typing from scratch
         value={value === 0 ? '' : value.toLocaleString('en-US')} 
         onChange={handleChange}
-        placeholder="0"
+        placeholder={placeholder}
         className={className}
       />
       {symbol && (
@@ -65,10 +67,19 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ currency
   const [termYears, setTermYears] = useState(30);
   
   // Escrow / Fees State
+  const [taxMode, setTaxMode] = useState<'percent' | 'fixed'>('percent');
   const [taxRate, setTaxRate] = useState(1.1); // National Avg approx 1.1%
+  const [taxFixed, setTaxFixed] = useState(0);
+
+  const [insuranceMode, setInsuranceMode] = useState<'percent' | 'fixed'>('percent');
   const [insuranceRate, setInsuranceRate] = useState(0.5); // National Avg approx 0.5%
+  const [insuranceFixed, setInsuranceFixed] = useState(0);
+
   const [hoaFees, setHoaFees] = useState(0);
+  
+  const [pmiMode, setPmiMode] = useState<'percent' | 'fixed'>('percent');
   const [pmiRate, setPmiRate] = useState(0.5); // Approx 0.5% - 1%
+  const [pmiFixed, setPmiFixed] = useState(0);
   const [includePmi, setIncludePmi] = useState(false);
 
   // Existing Mortgage Specifics
@@ -102,6 +113,37 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ currency
       setIncludePmi(false);
     }
   }, [loanAmount, propertyValue]);
+
+  // --- Logic Helpers ---
+  const toggleTaxMode = (newMode: 'percent' | 'fixed') => {
+    if (newMode === taxMode) return;
+    if (newMode === 'fixed') {
+      setTaxFixed(Math.round((propertyValue * (taxRate / 100)) / 12));
+    } else {
+      if (propertyValue > 0) setTaxRate(Number((((taxFixed * 12) / propertyValue) * 100).toFixed(2)));
+    }
+    setTaxMode(newMode);
+  };
+
+  const toggleInsuranceMode = (newMode: 'percent' | 'fixed') => {
+    if (newMode === insuranceMode) return;
+    if (newMode === 'fixed') {
+      setInsuranceFixed(Math.round((propertyValue * (insuranceRate / 100)) / 12));
+    } else {
+      if (propertyValue > 0) setInsuranceRate(Number((((insuranceFixed * 12) / propertyValue) * 100).toFixed(2)));
+    }
+    setInsuranceMode(newMode);
+  };
+
+  const togglePmiMode = (newMode: 'percent' | 'fixed') => {
+    if (newMode === pmiMode) return;
+    if (newMode === 'fixed') {
+      setPmiFixed(Math.round((loanAmount * (pmiRate / 100)) / 12));
+    } else {
+      if (loanAmount > 0) setPmiRate(Number((((pmiFixed * 12) / loanAmount) * 100).toFixed(2)));
+    }
+    setPmiMode(newMode);
+  };
 
   // --- Calculations ---
 
@@ -142,11 +184,12 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ currency
   }, [loanAmount, interestRate, termYears, extraPayment, effectiveMonthsPaid]);
 
   // 4. Escrow Monthly Costs
-  const monthlyTax = (propertyValue * (taxRate / 100)) / 12;
-  const monthlyInsurance = (propertyValue * (insuranceRate / 100)) / 12;
-  // PMI is usually based on original loan amount, though strictly it drops off. For estimator, we use current loan amount or original?
-  // Standard is % of Original Loan Amount / 12.
-  const monthlyPmi = includePmi ? (loanAmount * (pmiRate / 100)) / 12 : 0;
+  const monthlyTax = taxMode === 'percent' ? (propertyValue * (taxRate / 100)) / 12 : taxFixed;
+  const monthlyInsurance = insuranceMode === 'percent' ? (propertyValue * (insuranceRate / 100)) / 12 : insuranceFixed;
+  // PMI is usually based on original loan amount, though strictly it drops off.
+  const monthlyPmi = includePmi 
+    ? (pmiMode === 'percent' ? (loanAmount * (pmiRate / 100)) / 12 : pmiFixed) 
+    : 0;
   
   const monthlyFeesTotal = monthlyTax + monthlyInsurance + monthlyPmi + hoaFees;
   const totalMonthlyPayment = baseSchedule.monthlyPayment + monthlyFeesTotal;
@@ -338,61 +381,121 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ currency
                     
                     {/* Property Tax */}
                     <div className="space-y-2">
-                       <div className="flex justify-between items-baseline">
+                       <div className="flex justify-between items-center">
                           <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
                              <Landmark size={12} className="text-slate-400" /> Prop. Tax
                           </label>
-                          <span className="text-xs font-medium text-slate-600">{formatCurrency(monthlyTax)}/mo</span>
-                       </div>
-                       <div className="flex items-center gap-2">
-                          <input 
-                             type="range" min="0" max="4" step="0.1"
-                             value={taxRate}
-                             onChange={(e) => setTaxRate(Number(e.target.value))}
-                             className="flex-1 h-1.5 bg-slate-200 rounded appearance-none cursor-pointer accent-slate-500"
-                          />
-                          <div className="w-16 relative">
-                             <input 
-                                type="number" step="0.1"
-                                value={taxRate}
-                                onChange={(e) => setTaxRate(Number(e.target.value))}
-                                className="w-full p-1 pr-4 text-xs border border-slate-300 rounded text-right bg-white text-slate-800"
-                             />
-                             <span className="absolute right-1 top-1/2 -translate-y-1/2 text-[10px] text-slate-400">%</span>
+                          <div className="flex bg-slate-200/60 rounded p-0.5">
+                            <button 
+                              onClick={() => toggleTaxMode('percent')} 
+                              className={`px-1.5 py-0.5 text-[10px] font-bold rounded transition ${taxMode === 'percent' ? 'bg-white shadow text-indigo-600' : 'text-slate-400'}`}
+                            >
+                              %
+                            </button>
+                            <button 
+                              onClick={() => toggleTaxMode('fixed')} 
+                              className={`px-1.5 py-0.5 text-[10px] font-bold rounded transition ${taxMode === 'fixed' ? 'bg-white shadow text-indigo-600' : 'text-slate-400'}`}
+                            >
+                              $
+                            </button>
                           </div>
+                       </div>
+                       
+                       {taxMode === 'percent' ? (
+                         <div className="flex items-center gap-2">
+                            <input 
+                               type="range" min="0" max="4" step="0.1"
+                               value={taxRate}
+                               onChange={(e) => setTaxRate(Number(e.target.value))}
+                               className="flex-1 h-1.5 bg-slate-200 rounded appearance-none cursor-pointer accent-slate-500"
+                            />
+                            <div className="w-16 relative">
+                               <input 
+                                  type="number" step="0.1"
+                                  value={taxRate}
+                                  onChange={(e) => setTaxRate(Number(e.target.value))}
+                                  className="w-full p-1 pr-4 text-xs border border-slate-300 rounded text-right bg-white text-slate-800"
+                               />
+                               <span className="absolute right-1 top-1/2 -translate-y-1/2 text-[10px] text-slate-400">%</span>
+                            </div>
+                         </div>
+                       ) : (
+                         <div className="relative">
+                            <CurrencyInput 
+                              value={taxFixed}
+                              onChange={setTaxFixed}
+                              symbol={currencyConfig.symbol}
+                              className="w-full p-1.5 pl-6 text-xs font-bold border border-slate-300 rounded text-slate-800 bg-white"
+                              placeholder="0"
+                            />
+                            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400">/mo</span>
+                         </div>
+                       )}
+                       <div className="text-right text-[10px] text-slate-500">
+                         {taxMode === 'percent' ? formatCurrency(monthlyTax) + '/mo' : `approx ${(taxRate).toFixed(2)}%`}
                        </div>
                     </div>
 
                     {/* Home Insurance */}
                     <div className="space-y-2">
-                       <div className="flex justify-between items-baseline">
+                       <div className="flex justify-between items-center">
                           <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
                              <Shield size={12} className="text-slate-400" /> Insurance
                           </label>
-                          <span className="text-xs font-medium text-slate-600">{formatCurrency(monthlyInsurance)}/mo</span>
-                       </div>
-                       <div className="flex items-center gap-2">
-                          <input 
-                             type="range" min="0" max="2" step="0.05"
-                             value={insuranceRate}
-                             onChange={(e) => setInsuranceRate(Number(e.target.value))}
-                             className="flex-1 h-1.5 bg-slate-200 rounded appearance-none cursor-pointer accent-slate-500"
-                          />
-                          <div className="w-16 relative">
-                             <input 
-                                type="number" step="0.05"
-                                value={insuranceRate}
-                                onChange={(e) => setInsuranceRate(Number(e.target.value))}
-                                className="w-full p-1 pr-4 text-xs border border-slate-300 rounded text-right bg-white text-slate-800"
-                             />
-                             <span className="absolute right-1 top-1/2 -translate-y-1/2 text-[10px] text-slate-400">%</span>
+                          <div className="flex bg-slate-200/60 rounded p-0.5">
+                            <button 
+                              onClick={() => toggleInsuranceMode('percent')} 
+                              className={`px-1.5 py-0.5 text-[10px] font-bold rounded transition ${insuranceMode === 'percent' ? 'bg-white shadow text-indigo-600' : 'text-slate-400'}`}
+                            >
+                              %
+                            </button>
+                            <button 
+                              onClick={() => toggleInsuranceMode('fixed')} 
+                              className={`px-1.5 py-0.5 text-[10px] font-bold rounded transition ${insuranceMode === 'fixed' ? 'bg-white shadow text-indigo-600' : 'text-slate-400'}`}
+                            >
+                              $
+                            </button>
                           </div>
+                       </div>
+                       
+                       {insuranceMode === 'percent' ? (
+                         <div className="flex items-center gap-2">
+                            <input 
+                               type="range" min="0" max="2" step="0.05"
+                               value={insuranceRate}
+                               onChange={(e) => setInsuranceRate(Number(e.target.value))}
+                               className="flex-1 h-1.5 bg-slate-200 rounded appearance-none cursor-pointer accent-slate-500"
+                            />
+                            <div className="w-16 relative">
+                               <input 
+                                  type="number" step="0.05"
+                                  value={insuranceRate}
+                                  onChange={(e) => setInsuranceRate(Number(e.target.value))}
+                                  className="w-full p-1 pr-4 text-xs border border-slate-300 rounded text-right bg-white text-slate-800"
+                               />
+                               <span className="absolute right-1 top-1/2 -translate-y-1/2 text-[10px] text-slate-400">%</span>
+                            </div>
+                         </div>
+                       ) : (
+                         <div className="relative">
+                            <CurrencyInput 
+                              value={insuranceFixed}
+                              onChange={setInsuranceFixed}
+                              symbol={currencyConfig.symbol}
+                              className="w-full p-1.5 pl-6 text-xs font-bold border border-slate-300 rounded text-slate-800 bg-white"
+                              placeholder="0"
+                            />
+                            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400">/mo</span>
+                         </div>
+                       )}
+                       <div className="text-right text-[10px] text-slate-500">
+                         {insuranceMode === 'percent' ? formatCurrency(monthlyInsurance) + '/mo' : `approx ${(insuranceRate).toFixed(2)}%`}
                        </div>
                     </div>
 
                     {/* PMI */}
                     <div className="space-y-2">
-                       <div className="flex justify-between items-baseline">
+                       <div className="flex justify-between items-center">
                           <div className="flex items-center gap-2">
                              <input 
                                type="checkbox" 
@@ -402,24 +505,58 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ currency
                              />
                              <label className="text-xs font-bold text-slate-700">PMI</label>
                           </div>
-                          <span className="text-xs font-medium text-slate-600">{formatCurrency(monthlyPmi)}/mo</span>
+                          {includePmi && (
+                            <div className="flex bg-slate-200/60 rounded p-0.5">
+                              <button 
+                                onClick={() => togglePmiMode('percent')} 
+                                className={`px-1.5 py-0.5 text-[10px] font-bold rounded transition ${pmiMode === 'percent' ? 'bg-white shadow text-indigo-600' : 'text-slate-400'}`}
+                              >
+                                %
+                              </button>
+                              <button 
+                                onClick={() => togglePmiMode('fixed')} 
+                                className={`px-1.5 py-0.5 text-[10px] font-bold rounded transition ${pmiMode === 'fixed' ? 'bg-white shadow text-indigo-600' : 'text-slate-400'}`}
+                              >
+                                $
+                              </button>
+                            </div>
+                          )}
                        </div>
-                       <div className={`flex items-center gap-2 ${!includePmi ? 'opacity-50 pointer-events-none' : ''}`}>
-                          <input 
-                             type="range" min="0.1" max="2" step="0.1"
-                             value={pmiRate}
-                             onChange={(e) => setPmiRate(Number(e.target.value))}
-                             className="flex-1 h-1.5 bg-slate-200 rounded appearance-none cursor-pointer accent-orange-500"
-                          />
-                          <div className="w-16 relative">
-                             <input 
-                                type="number" step="0.1"
-                                value={pmiRate}
-                                onChange={(e) => setPmiRate(Number(e.target.value))}
-                                className="w-full p-1 pr-4 text-xs border border-slate-300 rounded text-right bg-white text-slate-800"
-                             />
-                             <span className="absolute right-1 top-1/2 -translate-y-1/2 text-[10px] text-slate-400">%</span>
-                          </div>
+                       
+                       <div className={`${!includePmi ? 'opacity-50 pointer-events-none' : ''}`}>
+                         {pmiMode === 'percent' ? (
+                           <div className="flex items-center gap-2">
+                              <input 
+                                 type="range" min="0.1" max="2" step="0.1"
+                                 value={pmiRate}
+                                 onChange={(e) => setPmiRate(Number(e.target.value))}
+                                 className="flex-1 h-1.5 bg-slate-200 rounded appearance-none cursor-pointer accent-orange-500"
+                              />
+                              <div className="w-16 relative">
+                                 <input 
+                                    type="number" step="0.1"
+                                    value={pmiRate}
+                                    onChange={(e) => setPmiRate(Number(e.target.value))}
+                                    className="w-full p-1 pr-4 text-xs border border-slate-300 rounded text-right bg-white text-slate-800"
+                                 />
+                                 <span className="absolute right-1 top-1/2 -translate-y-1/2 text-[10px] text-slate-400">%</span>
+                              </div>
+                           </div>
+                         ) : (
+                           <div className="relative">
+                              <CurrencyInput 
+                                value={pmiFixed}
+                                onChange={setPmiFixed}
+                                symbol={currencyConfig.symbol}
+                                className="w-full p-1.5 pl-6 text-xs font-bold border border-slate-300 rounded text-slate-800 bg-white"
+                                placeholder="0"
+                              />
+                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400">/mo</span>
+                           </div>
+                         )}
+                       </div>
+                       <div className={`text-right text-[10px] text-slate-500 ${!includePmi ? 'opacity-0' : ''}`}>
+                         {pmiMode === 'percent' ? formatCurrency(monthlyPmi) + '/mo' : `approx ${(pmiRate).toFixed(2)}%`}
                        </div>
                     </div>
 
@@ -429,7 +566,6 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ currency
                           <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
                              <Building2 size={12} className="text-slate-400" /> HOA
                           </label>
-                          <span className="text-xs font-medium text-slate-600">{formatCurrency(hoaFees)}/mo</span>
                        </div>
                        <div className="relative">
                           <CurrencyInput 
@@ -438,6 +574,7 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ currency
                              symbol={currencyConfig.symbol}
                              className="w-full p-1.5 pl-6 text-xs font-bold border border-slate-200 rounded text-slate-700 bg-white"
                           />
+                          <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400">/mo</span>
                        </div>
                     </div>
 
