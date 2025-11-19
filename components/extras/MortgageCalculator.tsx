@@ -256,7 +256,7 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ currency
                       value={propertyValue}
                       onChange={setPropertyValue}
                       symbol={currencyConfig.symbol}
-                      className="w-full p-2 pl-8 border border-slate-200 rounded font-semibold text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none"
+                      className="w-full p-2 pl-8 border border-slate-200 rounded font-semibold text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
                     />
                  </div>
 
@@ -268,7 +268,7 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ currency
                       value={loanAmount}
                       onChange={setLoanAmount}
                       symbol={currencyConfig.symbol}
-                      className="w-full p-2 pl-8 border border-slate-200 rounded font-semibold text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none"
+                      className="w-full p-2 pl-8 border border-slate-200 rounded font-semibold text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
                     />
                     <div className="flex justify-between text-[10px]">
                        <span className="text-slate-400">LTV: {ltv.toFixed(0)}%</span>
@@ -284,7 +284,7 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ currency
                         step="0.125"
                         value={interestRate}
                         onChange={(e) => setInterestRate(parseFloat(e.target.value) || 0)}
-                        className="w-full p-2 border border-slate-200 rounded font-semibold text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none"
+                        className="w-full p-2 border border-slate-200 rounded font-semibold text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
                       />
                     </div>
                  </div>
@@ -356,7 +356,7 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ currency
                                 type="number" step="0.1"
                                 value={taxRate}
                                 onChange={(e) => setTaxRate(Number(e.target.value))}
-                                className="w-full p-1 pr-4 text-xs border border-slate-300 rounded text-right"
+                                className="w-full p-1 pr-4 text-xs border border-slate-300 rounded text-right bg-white text-slate-800"
                              />
                              <span className="absolute right-1 top-1/2 -translate-y-1/2 text-[10px] text-slate-400">%</span>
                           </div>
@@ -383,7 +383,7 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ currency
                                 type="number" step="0.05"
                                 value={insuranceRate}
                                 onChange={(e) => setInsuranceRate(Number(e.target.value))}
-                                className="w-full p-1 pr-4 text-xs border border-slate-300 rounded text-right"
+                                className="w-full p-1 pr-4 text-xs border border-slate-300 rounded text-right bg-white text-slate-800"
                              />
                              <span className="absolute right-1 top-1/2 -translate-y-1/2 text-[10px] text-slate-400">%</span>
                           </div>
@@ -398,7 +398,7 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ currency
                                type="checkbox" 
                                checked={includePmi} 
                                onChange={(e) => setIncludePmi(e.target.checked)}
-                               className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 h-3 w-3"
+                               className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 h-3 w-3 bg-white"
                              />
                              <label className="text-xs font-bold text-slate-700">PMI</label>
                           </div>
@@ -416,7 +416,7 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ currency
                                 type="number" step="0.1"
                                 value={pmiRate}
                                 onChange={(e) => setPmiRate(Number(e.target.value))}
-                                className="w-full p-1 pr-4 text-xs border border-slate-300 rounded text-right"
+                                className="w-full p-1 pr-4 text-xs border border-slate-300 rounded text-right bg-white text-slate-800"
                              />
                              <span className="absolute right-1 top-1/2 -translate-y-1/2 text-[10px] text-slate-400">%</span>
                           </div>
@@ -436,7 +436,7 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ currency
                              value={hoaFees}
                              onChange={setHoaFees}
                              symbol={currencyConfig.symbol}
-                             className="w-full p-1.5 pl-6 text-xs font-bold border border-slate-200 rounded text-slate-700"
+                             className="w-full p-1.5 pl-6 text-xs font-bold border border-slate-200 rounded text-slate-700 bg-white"
                           />
                        </div>
                     </div>
@@ -617,7 +617,7 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ currency
                              value={closingCosts}
                              onChange={setClosingCosts}
                              symbol={currencyConfig.symbol}
-                             className="w-full p-1.5 pl-6 text-xs font-bold border border-slate-200 rounded text-slate-500 focus:ring-1 focus:ring-indigo-500 outline-none"
+                             className="w-full p-1.5 pl-6 text-xs font-bold border border-slate-200 rounded text-slate-500 focus:ring-1 focus:ring-indigo-500 outline-none bg-white"
                            />
                          </div>
                      </div>
@@ -656,7 +656,7 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ currency
                            step="0.125"
                            value={currentRateOverride}
                            onChange={(e) => setCurrentRateOverride(parseFloat(e.target.value) || 0)}
-                           className="w-16 p-1 text-xs font-bold border border-slate-300 rounded"
+                           className="w-16 p-1 text-xs font-bold border border-slate-300 rounded bg-white text-slate-700"
                          />
                          <span className="text-xs text-slate-500">%</span>
                       </div>
