@@ -1,14 +1,55 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { calculateAmortization, analyzeRefinance, RefinanceOption } from '../../lib/mortgageMath';
-import { UserInput } from '../../lib/types';
-import { DollarSign, Euro, PoundSterling, TrendingDown, Calendar, Home, Percent, CheckCircle, XCircle, ChevronRight, Info, AlertCircle, Lock, Unlock, History } from 'lucide-react';
+import { DollarSign, Euro, PoundSterling, TrendingDown, Home, Percent, CheckCircle, XCircle, Unlock, Lock, History } from 'lucide-react';
 import { CURRENCIES } from '../../lib/constants';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, Legend, ReferenceLine } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Legend, ReferenceLine } from 'recharts';
 
 interface MortgageCalculatorProps {
   currencyCode: 'USD' | 'EUR' | 'GBP';
 }
+
+// Helper Component for formatted inputs
+const CurrencyInput = ({ 
+  value, 
+  onChange, 
+  className,
+  symbol
+}: { 
+  value: number; 
+  onChange: (val: number) => void; 
+  className?: string;
+  symbol?: string;
+}) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Remove non-digits (keeping it integer-only for simplicity in this context)
+    const raw = e.target.value.replace(/[^0-9]/g, '');
+    if (!raw) {
+      onChange(0);
+    } else {
+      onChange(parseInt(raw, 10));
+    }
+  };
+
+  return (
+    <div className="relative w-full">
+      <input
+        type="text"
+        inputMode="numeric"
+        // Display empty if 0 to allow cleaner typing from scratch
+        value={value === 0 ? '' : value.toLocaleString('en-US')} 
+        onChange={handleChange}
+        placeholder="0"
+        className={className}
+      />
+      {symbol && (
+         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold pointer-events-none">
+            {symbol}
+         </span>
+      )}
+    </div>
+  );
+};
 
 export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ currencyCode }) => {
   const currencyConfig = CURRENCIES[currencyCode];
@@ -46,7 +87,6 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ currency
   // --- Calculations ---
 
   // 1. Base Schedule (The "Agreement")
-  // Used to determine the Fixed Monthly Payment and Original Payoff Schedule
   const baseSchedule = useMemo(() => {
     return calculateAmortization(loanAmount, interestRate, termYears, 0, 0);
   }, [loanAmount, interestRate, termYears]);
@@ -55,7 +95,6 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ currency
   const effectiveMonthsPaid = mode === 'new' ? 0 : monthsPaid;
   
   const currentStatus = useMemo(() => {
-    // Safety check
     if (effectiveMonthsPaid >= baseSchedule.schedule.length) {
       return baseSchedule.schedule[baseSchedule.schedule.length - 1];
     }
@@ -64,7 +103,7 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ currency
       totalPaid: 0, 
       principal: 0, 
       interest: 0, 
-      totalInterest: 0,
+      totalInterest: 0, 
       month: 0 
     };
   }, [baseSchedule, effectiveMonthsPaid, loanAmount]);
@@ -73,7 +112,6 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ currency
   const principalPaidSoFar = loanAmount - currentBalance;
 
   // 3. Future Projection (The "Reality" with Extra Payments)
-  // We start with Original Loan, but apply Extra Payments ONLY after 'effectiveMonthsPaid'
   const projectedSchedule = useMemo(() => {
     return calculateAmortization(
       loanAmount, 
@@ -85,8 +123,6 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ currency
   }, [loanAmount, interestRate, termYears, extraPayment, effectiveMonthsPaid]);
 
   // 4. Savings Analysis (From "Now" onwards)
-  const remainingBaseCost = baseSchedule.totalPaid - currentStatus.totalPaid;
-  // To be precise: The projected total cost minus what we already paid
   const projectedTotalCost = projectedSchedule.totalPaid;
   const savingsInterest = baseSchedule.totalPaid - projectedTotalCost; // Total Lifetime Savings
   const timeSavedMonths = baseSchedule.payoffMonths - projectedSchedule.payoffMonths;
@@ -99,23 +135,13 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ currency
   ];
 
   const refiAnalysis = useMemo(() => {
-    // We compare against the "Keep Current Loan" scenario (no extra payments assumed for baseline comparison usually)
-    // Remaining Total Cost on Current Loan = (Monthly Payment * Remaining Months)
-    // Note: This ignores the extra payment user entered above, comparing "Status Quo" vs "Refi".
     const remainingMonthsBase = baseSchedule.payoffMonths - effectiveMonthsPaid;
     const remainingTotalCostBase = baseSchedule.monthlyPayment * remainingMonthsBase;
     
-    // If user overrides rate, we need to simulate a "Current Loan" with that rate but SAME balance?
-    // Actually, usually "Current Rate" just affects the "Keep" comparison.
-    // If override is on, we recalculate the "Current Payment" based on Balance + Rate + Remaining Term.
-    // This simulates a "What if my rate is actually X" without changing the whole calculator.
     let baselinePayment = baseSchedule.monthlyPayment;
     let baselineTotalCost = remainingTotalCostBase;
 
     if (overrideCurrentRate && currentRateOverride !== interestRate) {
-       // Recalculate "Current Payment" based on Remaining Balance, Override Rate, and Remaining Term
-       // This treats the "Current Loan" as if it were re-amortized or just checking market diff.
-       // Approximation: standard payment for remaining term.
        const reAmortizedPayment = (currentBalance * (currentRateOverride/1200)) / (1 - Math.pow(1 + currentRateOverride/1200, -remainingMonthsBase));
        baselinePayment = reAmortizedPayment;
        baselineTotalCost = reAmortizedPayment * remainingMonthsBase;
@@ -132,7 +158,6 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ currency
   // Chart Data
   const chartData = useMemo(() => {
     const data = [];
-    // We want to show the whole history for context
     const maxLen = Math.max(baseSchedule.schedule.length, projectedSchedule.schedule.length);
     const step = Math.max(1, Math.floor(maxLen / 60));
     
@@ -154,7 +179,6 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ currency
   const ltv = (currentBalance / homeValue) * 100;
 
   const handleLtvChange = (newLtv: number) => {
-    // LTV = Loan / HomeValue  ->  HomeValue = Loan / (LTV/100)
     setHomeValue(Math.round(currentBalance / (newLtv / 100)));
   };
 
@@ -205,17 +229,12 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ currency
                     <label className="text-xs font-bold text-slate-700">
                       {mode === 'existing' ? 'Original Loan Amount' : 'Loan Amount'}
                     </label>
-                    <div className="relative">
-                      <input 
-                        type="number" 
-                        value={loanAmount}
-                        onChange={(e) => setLoanAmount(Number(e.target.value))}
-                        className="w-full p-2 pl-8 border border-slate-200 rounded font-semibold text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none"
-                      />
-                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold">
-                         {currencyConfig.symbol}
-                      </span>
-                    </div>
+                    <CurrencyInput 
+                      value={loanAmount}
+                      onChange={setLoanAmount}
+                      symbol={currencyConfig.symbol}
+                      className="w-full p-2 pl-8 border border-slate-200 rounded font-semibold text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none"
+                    />
                  </div>
 
                  <div className="space-y-1">
@@ -225,7 +244,7 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ currency
                         type="number" 
                         step="0.125"
                         value={interestRate}
-                        onChange={(e) => setInterestRate(Number(e.target.value))}
+                        onChange={(e) => setInterestRate(parseFloat(e.target.value) || 0)}
                         className="w-full p-2 border border-slate-200 rounded font-semibold text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none"
                       />
                     </div>
@@ -319,14 +338,13 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ currency
                          onChange={(e) => setExtraPayment(Number(e.target.value))}
                          className="flex-1 h-2 bg-emerald-200 rounded-lg appearance-none cursor-pointer accent-emerald-600"
                        />
-                       <div className="w-24 relative">
-                         <input 
-                           type="number" 
+                       <div className="w-24">
+                         <CurrencyInput 
                            value={extraPayment}
-                           onChange={(e) => setExtraPayment(Number(e.target.value))}
-                           className="w-full p-1.5 pl-6 text-sm font-bold border border-emerald-300 rounded text-emerald-800 focus:ring-1 focus:ring-emerald-500 outline-none"
+                           onChange={setExtraPayment}
+                           symbol={currencyConfig.symbol}
+                           className="w-full p-1.5 pl-6 text-sm font-bold border border-emerald-300 rounded text-emerald-800 focus:ring-1 focus:ring-emerald-500 outline-none bg-white"
                          />
-                         <span className="absolute left-2 top-1/2 -translate-y-1/2 text-emerald-500 text-xs">{currencyConfig.symbol}</span>
                        </div>
                     </div>
                     {extraPayment > 0 && mode === 'existing' && (
@@ -407,10 +425,13 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ currency
                  
                  {/* Home Value & LTV */}
                  <div className="space-y-3">
-                    <div className="flex justify-between items-baseline">
-                      <label className="text-xs font-bold text-slate-500">Est. Home Value</label>
-                      <span className="text-xs font-bold text-slate-700">{formatCurrency(homeValue)}</span>
-                    </div>
+                    <label className="text-xs font-bold text-slate-500 mb-1 block">Est. Home Value</label>
+                    <CurrencyInput 
+                      value={homeValue} 
+                      onChange={setHomeValue} 
+                      symbol={currencyConfig.symbol}
+                      className="w-full p-2 pl-8 border border-slate-200 rounded font-semibold text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none"
+                    />
                     <input 
                          type="range" 
                          min={currentBalance} 
@@ -439,17 +460,26 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ currency
                  </div>
 
                  <div className="space-y-1 pt-2 border-t border-slate-50">
-                     <div className="flex justify-between items-center">
-                        <label className="text-xs font-bold text-slate-500">Closing Costs</label>
-                        <span className="text-xs text-slate-400">{formatCurrency(closingCosts)}</span>
+                     <label className="text-xs font-bold text-slate-500 mb-1 block">Closing Costs</label>
+                     <div className="flex items-center gap-4">
+                         <div className="flex-1">
+                           <input 
+                            type="range" 
+                            min="0" max="15000" step="500"
+                            value={closingCosts}
+                            onChange={(e) => setClosingCosts(Number(e.target.value))}
+                            className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-slate-400"
+                          />
+                         </div>
+                         <div className="w-28">
+                           <CurrencyInput 
+                             value={closingCosts}
+                             onChange={setClosingCosts}
+                             symbol={currencyConfig.symbol}
+                             className="w-full p-1.5 pl-6 text-xs font-bold border border-slate-200 rounded text-slate-500 focus:ring-1 focus:ring-indigo-500 outline-none"
+                           />
+                         </div>
                      </div>
-                     <input 
-                       type="range" 
-                       min="0" max="15000" step="500"
-                       value={closingCosts}
-                       onChange={(e) => setClosingCosts(Number(e.target.value))}
-                       className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-slate-400"
-                     />
                  </div>
                  
                  {/* Rate Config */}
@@ -484,7 +514,7 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ currency
                            type="number" 
                            step="0.125"
                            value={currentRateOverride}
-                           onChange={(e) => setCurrentRateOverride(Number(e.target.value))}
+                           onChange={(e) => setCurrentRateOverride(parseFloat(e.target.value) || 0)}
                            className="w-16 p-1 text-xs font-bold border border-slate-300 rounded"
                          />
                          <span className="text-xs text-slate-500">%</span>

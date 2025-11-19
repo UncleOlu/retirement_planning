@@ -10,6 +10,47 @@ interface InputPanelProps {
   onChange: (newInputs: UserInput) => void;
 }
 
+const MoneyInput = ({ 
+  value, 
+  onChange, 
+  className, 
+  placeholder,
+  ...props 
+}: { 
+  value: number; 
+  onChange: (val: string) => void;
+  className?: string;
+  placeholder?: string;
+} & Omit<React.InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange'>) => {
+  
+  // Format with commas, or empty string if 0 (to show placeholder)
+  const displayValue = value === 0 ? '' : value.toLocaleString('en-US');
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Remove commas and allow digits only
+    const raw = e.target.value.replace(/[^0-9]/g, '');
+    
+    if (raw === '') {
+      onChange('0');
+    } else {
+      // Parse integer to strip leading zeros (e.g. "05" -> 5)
+      onChange(parseInt(raw, 10).toString());
+    }
+  };
+
+  return (
+    <input
+      type="text"
+      inputMode="numeric"
+      value={displayValue}
+      onChange={handleInputChange}
+      className={className}
+      placeholder={placeholder || "0"}
+      {...props}
+    />
+  );
+};
+
 export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
   const [showPortfolioSplit, setShowPortfolioSplit] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -197,10 +238,9 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
               <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
                 <CurrencyIcon size={16} />
               </div>
-              <input 
-                type="number" 
+              <MoneyInput 
                 value={inputs.currentPortfolio}
-                onChange={(e) => handleChange('currentPortfolio', e.target.value)}
+                onChange={(val) => handleChange('currentPortfolio', val)}
                 className="w-full pl-9 p-2 rounded border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none font-semibold text-slate-700 bg-white"
                 placeholder="Total Savings"
               />
@@ -236,19 +276,16 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
                        <div className="absolute left-1 top-1/2 -translate-y-1/2 text-emerald-300">
                          <CurrencyIcon size={12} />
                        </div>
-                       <input 
-                          type="number"
-                          min="0"
-                          max={inputs.currentPortfolio}
+                       <MoneyInput 
                           value={inputs.currentRothBalance || 0}
-                          onChange={(e) => handleChange('currentRothBalance', e.target.value)}
+                          onChange={(val) => handleChange('currentRothBalance', val)}
                           className="w-full pl-4 p-1 text-right text-sm font-bold text-emerald-600 border border-slate-200 rounded hover:border-emerald-300 focus:border-emerald-500 outline-none focus:ring-1 focus:ring-emerald-200 bg-white"
                        />
                     </div>
                  </div>
                  
                  <div className="flex justify-between text-[10px] text-slate-400 mt-1 px-1">
-                    <span>Traditional: {currencySymbol}{Math.max(0, inputs.currentPortfolio - (inputs.currentRothBalance || 0))}</span>
+                    <span>Traditional: {currencySymbol}{Math.max(0, inputs.currentPortfolio - (inputs.currentRothBalance || 0)).toLocaleString()}</span>
                     <span>Roth: {inputs.currentPortfolio > 0 ? Math.round(((inputs.currentRothBalance || 0) / inputs.currentPortfolio) * 100) : 0}%</span>
                  </div>
                </div>
@@ -263,10 +300,9 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
             <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
                 <CurrencyIcon size={16} />
             </div>
-            <input 
-              type="number" 
+            <MoneyInput 
               value={inputs.monthlyContribution}
-              onChange={(e) => handleChange('monthlyContribution', e.target.value)}
+              onChange={(val) => handleChange('monthlyContribution', val)}
               className="w-full pl-9 p-2 rounded border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none bg-white text-slate-900"
             />
           </div>
@@ -282,12 +318,9 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
                   <div className="absolute left-1 top-1/2 -translate-y-1/2 text-indigo-300 pointer-events-none">
                      <CurrencyIcon size={12} />
                   </div>
-                  <input 
-                    type="number"
-                    min="0"
-                    max={inputs.monthlyContribution}
+                  <MoneyInput 
                     value={inputs.monthlyRothContribution}
-                    onChange={(e) => handleChange('monthlyRothContribution', e.target.value)}
+                    onChange={(val) => handleChange('monthlyRothContribution', val)}
                     className={`w-full pl-4 p-1 text-right text-sm font-bold text-indigo-700 border rounded outline-none focus:ring-1 focus:ring-indigo-200 bg-white ${errors.monthlyRothContribution ? 'border-red-300' : 'border-indigo-100 hover:border-indigo-300 focus:border-indigo-500'}`}
                   />
                </div>
@@ -302,7 +335,7 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
               className="w-full h-2 bg-indigo-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
             />
             <div className="flex justify-between mt-1 items-center">
-              <span className="text-[10px] text-slate-500">Trad: {currencySymbol}{Math.max(0, inputs.monthlyContribution - inputs.monthlyRothContribution)}</span>
+              <span className="text-[10px] text-slate-500">Trad: {currencySymbol}{Math.max(0, inputs.monthlyContribution - inputs.monthlyRothContribution).toLocaleString()}</span>
               
               {/* Display Error or Status */}
               {errors.monthlyRothContribution ? (
@@ -357,10 +390,9 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
             <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
                <CurrencyIcon size={16} />
             </div>
-            <input 
-              type="number" 
+            <MoneyInput 
               value={inputs.targetValue}
-              onChange={(e) => handleChange('targetValue', e.target.value)}
+              onChange={(val) => handleChange('targetValue', val)}
               className="w-full pl-9 p-2 rounded border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none font-medium text-slate-900 bg-white"
             />
           </div>
@@ -373,10 +405,9 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
             <Tooltip text="Estimated monthly benefit in today's dollars. This reduces the amount you need to withdraw from your portfolio." />
           </label>
           <div className="relative">
-            <input 
-              type="number" 
+            <MoneyInput 
               value={inputs.estimatedSocialSecurity}
-              onChange={(e) => handleChange('estimatedSocialSecurity', e.target.value)}
+              onChange={(val) => handleChange('estimatedSocialSecurity', val)}
               placeholder="e.g. 2000"
               className="w-full p-2 rounded border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none bg-white text-slate-900"
             />
