@@ -6,7 +6,7 @@ import { runSimulation } from './lib/financeMath';
 import { InputPanel } from './components/InputPanel';
 import { ResultsSummary } from './components/ResultsSummary';
 import { ViewToggle } from './components/ViewToggle';
-import { LayoutDashboard, Sliders, PieChart, Menu, Trash2, Plus, Loader2, Layers, User, ArrowDown, ChevronDown, X, Save } from 'lucide-react';
+import { LayoutDashboard, Sliders, PieChart, Menu, Trash2, Plus, Loader2, Layers, User, ArrowDown, ChevronDown, X, Save, Calculator, ArrowRight } from 'lucide-react';
 
 // Lazy load heavy components to save bandwidth and initial load time
 const ChartPanel = React.lazy(() => import('./components/ChartPanel').then(module => ({ default: module.ChartPanel })));
@@ -14,6 +14,7 @@ const RealityCheck = React.lazy(() => import('./components/RealityCheck').then(m
 const InflationModule = React.lazy(() => import('./components/EducationModules').then(module => ({ default: module.InflationModule })));
 const GoalSandbox = React.lazy(() => import('./components/GoalSandbox').then(module => ({ default: module.GoalSandbox })));
 const ScenarioComparison = React.lazy(() => import('./components/ScenarioComparison').then(module => ({ default: module.ScenarioComparison })));
+const ExtrasDashboard = React.lazy(() => import('./components/extras/ExtrasDashboard').then(module => ({ default: module.ExtrasDashboard })));
 
 const App: React.FC = () => {
   // Single source of truth for inputs
@@ -32,7 +33,7 @@ const App: React.FC = () => {
   const [isBuyingPowerReal, setIsBuyingPowerReal] = useState<boolean>(true);
   
   // Initialize tab based on screen size: Mobile starts with 'inputs' (Profile), Desktop starts with 'dashboard'
-  const [activeTab, setActiveTab] = useState<'inputs' | 'dashboard' | 'sandbox' | 'compare'>(() => 
+  const [activeTab, setActiveTab] = useState<'inputs' | 'dashboard' | 'sandbox' | 'compare' | 'extras'>(() => 
     window.innerWidth < 768 ? 'inputs' : 'dashboard'
   );
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -119,6 +120,11 @@ const App: React.FC = () => {
     setScenarios(scenarios.filter(s => s.id !== id));
   };
 
+  const handleMobileNav = (tab: typeof activeTab) => {
+    setActiveTab(tab);
+    setMobileMenuOpen(false);
+  };
+
   // Run simulation using debounced inputs
   const result = useMemo(() => runSimulation(debouncedInputs), [debouncedInputs]);
 
@@ -141,7 +147,7 @@ const App: React.FC = () => {
 
       {/* Mobile Menu Overlay - Scenarios & Save */}
       {mobileMenuOpen && (
-         <div className="fixed inset-0 z-50 bg-white p-4 md:hidden overflow-y-auto">
+         <div className="fixed inset-0 z-50 bg-white p-4 md:hidden overflow-y-auto animate-fade-in">
             <div className="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
                <h2 className="font-bold text-xl text-slate-800">Menu</h2>
                <button onClick={() => setMobileMenuOpen(false)} className="text-slate-500 p-2 bg-slate-100 rounded-full hover:bg-slate-200">
@@ -150,7 +156,7 @@ const App: React.FC = () => {
                </button>
             </div>
             
-            {/* NEW: Save Current Scenario Mobile UI */}
+            {/* 1. Save Current Scenario Mobile UI */}
             <div className="mb-8 bg-emerald-50 rounded-xl p-4 border border-emerald-100 shadow-sm">
               <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-800 mb-3 flex items-center gap-2">
                 <Save size={14} /> Current Simulation
@@ -183,11 +189,34 @@ const App: React.FC = () => {
               )}
             </div>
 
+            {/* 2. Quick Navigation - Placed between Save and Saved List */}
+            <div className="mb-8">
+               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Quick Navigation</h3>
+               <div className="grid grid-cols-2 gap-3">
+                  <button onClick={() => handleMobileNav('dashboard')} className="p-3 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-100 flex flex-col items-center justify-center gap-2 transition">
+                     <PieChart size={20} className="text-blue-500" />
+                     <span className="text-xs font-bold text-slate-700">Dashboard</span>
+                  </button>
+                   <button onClick={() => handleMobileNav('extras')} className="p-3 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-100 flex flex-col items-center justify-center gap-2 transition">
+                     <Calculator size={20} className="text-purple-500" />
+                     <span className="text-xs font-bold text-slate-700">Extras</span>
+                  </button>
+                  <button onClick={() => handleMobileNav('compare')} className="p-3 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-100 flex flex-col items-center justify-center gap-2 transition">
+                     <Layers size={20} className="text-indigo-500" />
+                     <span className="text-xs font-bold text-slate-700">Compare</span>
+                  </button>
+                  <button onClick={() => handleMobileNav('sandbox')} className="p-3 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-100 flex flex-col items-center justify-center gap-2 transition">
+                     <Sliders size={20} className="text-amber-500" />
+                     <span className="text-xs font-bold text-slate-700">Sandbox</span>
+                  </button>
+               </div>
+            </div>
+
+            {/* 3. Saved Scenarios List */}
             <h2 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
-              <Layers size={18} className="text-indigo-500" /> Saved Scenarios
+              <Layers size={18} className="text-slate-500" /> Saved Scenarios
             </h2>
             
-            {/* Mobile Scenario List */}
             {scenarios.length > 0 ? (
               <div className="space-y-3">
                 {scenarios.map(s => (
@@ -331,6 +360,17 @@ const App: React.FC = () => {
               <Sliders size={18} />
               Sandbox
             </button>
+             <button 
+              onClick={() => setActiveTab('extras')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition whitespace-nowrap ${
+                activeTab === 'extras' 
+                  ? 'bg-purple-50 text-purple-700' 
+                  : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+              }`}
+            >
+              <Calculator size={18} />
+              Extras
+            </button>
           </div>
 
           {/* Desktop View Toggle - Only visible on dashboard and desktop sizes */}
@@ -437,6 +477,8 @@ const App: React.FC = () => {
               </>
             ) : activeTab === 'compare' ? (
                <ScenarioComparison scenarios={scenarios} />
+            ) : activeTab === 'extras' ? (
+               <ExtrasDashboard currency={inputs.currency} />
             ) : (
               <GoalSandbox inputs={inputs} />
             )}

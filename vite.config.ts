@@ -9,9 +9,13 @@ export default defineConfig({
     minify: 'esbuild',
     rollupOptions: {
       output: {
-        // Manual chunks for code splitting to optimize caching and bandwidth costs
+        // Manual chunks optimization:
+        // We separate core React deps but leave heavy libs like Recharts to be 
+        // split automatically into their lazy-loaded components (e.g., ChartPanel, Extras)
+        // This prevents loading charting logic on the initial landing page.
         manualChunks: {
-          'vendor': ['react', 'react-dom', 'recharts', 'lucide-react'],
+          'react-core': ['react', 'react-dom'],
+          'icons': ['lucide-react'],
         },
       },
     },
