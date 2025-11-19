@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, Suspense, useRef } from 'react';
 import { INITIAL_INPUTS } from './lib/constants';
 import { UserInput, Scenario } from './lib/types';
@@ -6,6 +7,8 @@ import { InputPanel } from './components/InputPanel';
 import { ResultsSummary } from './components/ResultsSummary';
 import { ViewToggle } from './components/ViewToggle';
 import { LayoutDashboard, Sliders, PieChart, Menu, Trash2, Plus, Loader2, Layers, User, ArrowDown, ChevronDown, X, Save, Calculator, ArrowRight } from 'lucide-react';
+import { ComplianceBanner } from './components/ComplianceBanner';
+import { LegalFooter } from './components/LegalFooter';
 
 // Lazy load heavy components to save bandwidth and initial load time
 const ChartPanel = React.lazy(() => import('./components/ChartPanel').then(module => ({ default: module.ChartPanel })));
@@ -162,6 +165,7 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-slate-50">
+      <ComplianceBanner />
       
       {/* Mobile Header */}
       <div className="md:hidden bg-white p-4 border-b flex justify-between items-center sticky top-0 z-20 shadow-sm">
@@ -515,6 +519,9 @@ const App: React.FC = () => {
             )}
             </Suspense>
           </div>
+
+          {/* Legal Footer Component */}
+          <LegalFooter />
         </div>
       </main>
     </div>
