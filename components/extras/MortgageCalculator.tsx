@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { calculateAmortization, analyzeRefinance, RefinanceOption } from '../../lib/mortgageMath';
-import { DollarSign, Euro, PoundSterling, TrendingDown, Home, Percent, CheckCircle, XCircle, Unlock, Lock, History } from 'lucide-react';
+import { TrendingDown, Home, Percent, CheckCircle, XCircle, Unlock, Lock, History, Shield, Building2, Landmark, Receipt, Info } from 'lucide-react';
 import { CURRENCIES } from '../../lib/constants';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Legend, ReferenceLine } from 'recharts';
 
@@ -58,10 +58,19 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ currency
   // --- Main Loan State ---
   const [mode, setMode] = useState<'new' | 'existing'>('new');
   
-  const [loanAmount, setLoanAmount] = useState(300000); // "Original Principal" if existing
+  const [loanAmount, setLoanAmount] = useState(300000); 
+  const [propertyValue, setPropertyValue] = useState(375000); // Default to 80% LTV for 300k loan
+  
   const [interestRate, setInterestRate] = useState(6.5);
   const [termYears, setTermYears] = useState(30);
   
+  // Escrow / Fees State
+  const [taxRate, setTaxRate] = useState(1.1); // National Avg approx 1.1%
+  const [insuranceRate, setInsuranceRate] = useState(0.5); // National Avg approx 0.5%
+  const [hoaFees, setHoaFees] = useState(0);
+  const [pmiRate, setPmiRate] = useState(0.5); // Approx 0.5% - 1%
+  const [includePmi, setIncludePmi] = useState(false);
+
   // Existing Mortgage Specifics
   const [monthsPaid, setMonthsPaid] = useState(24); // 2 years in
 
@@ -69,7 +78,7 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ currency
   const [extraPayment, setExtraPayment] = useState(0);
   
   // --- Refinance State ---
-  const [homeValue, setHomeValue] = useState(400000);
+  // propertyValue is shared now
   const [refiRate, setRefiRate] = useState(5.5);
   const [closingCosts, setClosingCosts] = useState(5000);
   
@@ -83,6 +92,16 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ currency
       setCurrentRateOverride(interestRate);
     }
   }, [interestRate, overrideCurrentRate]);
+
+  // Auto-detect PMI need based on LTV
+  const ltv = (loanAmount / propertyValue) * 100;
+  useEffect(() => {
+    if (ltv > 80) {
+      setIncludePmi(true);
+    } else {
+      setIncludePmi(false);
+    }
+  }, [loanAmount, propertyValue]);
 
   // --- Calculations ---
 
@@ -122,12 +141,22 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ currency
     );
   }, [loanAmount, interestRate, termYears, extraPayment, effectiveMonthsPaid]);
 
-  // 4. Savings Analysis (From "Now" onwards)
+  // 4. Escrow Monthly Costs
+  const monthlyTax = (propertyValue * (taxRate / 100)) / 12;
+  const monthlyInsurance = (propertyValue * (insuranceRate / 100)) / 12;
+  // PMI is usually based on original loan amount, though strictly it drops off. For estimator, we use current loan amount or original?
+  // Standard is % of Original Loan Amount / 12.
+  const monthlyPmi = includePmi ? (loanAmount * (pmiRate / 100)) / 12 : 0;
+  
+  const monthlyFeesTotal = monthlyTax + monthlyInsurance + monthlyPmi + hoaFees;
+  const totalMonthlyPayment = baseSchedule.monthlyPayment + monthlyFeesTotal;
+
+  // 5. Savings Analysis (From "Now" onwards)
   const projectedTotalCost = projectedSchedule.totalPaid;
   const savingsInterest = baseSchedule.totalPaid - projectedTotalCost; // Total Lifetime Savings
   const timeSavedMonths = baseSchedule.payoffMonths - projectedSchedule.payoffMonths;
 
-  // 5. Refinance Analysis
+  // 6. Refinance Analysis
   const refiOptions: RefinanceOption[] = [
     { termYears: 30, rate: refiRate, closingCosts, rollInCosts: false },
     { termYears: 20, rate: Math.max(2, refiRate - 0.25), closingCosts, rollInCosts: false },
@@ -176,11 +205,7 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ currency
     return data;
   }, [baseSchedule, projectedSchedule, effectiveMonthsPaid]);
 
-  const ltv = (currentBalance / homeValue) * 100;
-
-  const handleLtvChange = (newLtv: number) => {
-    setHomeValue(Math.round(currentBalance / (newLtv / 100)));
-  };
+  const currentLtv = (currentBalance / propertyValue) * 100;
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -226,6 +251,16 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ currency
 
               <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700">Property Value</label>
+                    <CurrencyInput 
+                      value={propertyValue}
+                      onChange={setPropertyValue}
+                      symbol={currencyConfig.symbol}
+                      className="w-full p-2 pl-8 border border-slate-200 rounded font-semibold text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none"
+                    />
+                 </div>
+
+                 <div className="space-y-1">
                     <label className="text-xs font-bold text-slate-700">
                       {mode === 'existing' ? 'Original Loan Amount' : 'Loan Amount'}
                     </label>
@@ -235,6 +270,10 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ currency
                       symbol={currencyConfig.symbol}
                       className="w-full p-2 pl-8 border border-slate-200 rounded font-semibold text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none"
                     />
+                    <div className="flex justify-between text-[10px]">
+                       <span className="text-slate-400">LTV: {ltv.toFixed(0)}%</span>
+                       {ltv > 80 && <span className="text-orange-500 font-bold">PMI Likely</span>}
+                    </div>
                  </div>
 
                  <div className="space-y-1">
@@ -268,7 +307,7 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ currency
                  </div>
 
                  {mode === 'existing' && (
-                   <div className="space-y-1 animate-fade-in">
+                   <div className="space-y-1 animate-fade-in col-span-1 md:col-span-2 bg-slate-50 p-3 rounded-lg border border-slate-100">
                       <label className="text-xs font-bold text-slate-700 flex justify-between">
                         Time Since Start
                         <span className="text-indigo-600">{(monthsPaid/12).toFixed(1)} Years</span>
@@ -289,31 +328,157 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ currency
                  )}
               </div>
 
-              {/* Results Bar */}
-              <div className="bg-slate-50 px-6 py-4 border-t border-slate-100">
-                  <div className="flex justify-between items-end mb-4">
-                     <div>
-                       <div className="text-xs text-slate-400 uppercase font-bold">Monthly Payment (P&I)</div>
-                       <div className="text-3xl font-bold text-slate-800">{formatCurrency(baseSchedule.monthlyPayment)}</div>
-                     </div>
-                     <div className="text-right">
-                        <div className="text-xs text-slate-400 uppercase font-bold">Current Balance</div>
-                        <div className="text-xl font-bold text-slate-700">{formatCurrency(currentBalance)}</div>
-                     </div>
-                  </div>
-                  
-                  {/* Progress Bar */}
-                  {mode === 'existing' && (
-                    <div className="space-y-1">
-                       <div className="flex justify-between text-[10px] font-bold text-slate-500 uppercase">
-                          <span>Paid: {formatCurrency(principalPaidSoFar)}</span>
-                          <span>{Math.round((1 - (currentBalance/loanAmount))*100)}% Equity</span>
+               {/* --- Taxes & Fees Section --- */}
+              <div className="bg-slate-50 border-t border-slate-100 p-6">
+                 <h4 className="text-xs font-bold text-slate-500 uppercase mb-4 flex items-center gap-2">
+                   <Landmark size={14} /> Taxes, Insurance & Fees
+                 </h4>
+                 
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    
+                    {/* Property Tax */}
+                    <div className="space-y-2">
+                       <div className="flex justify-between items-baseline">
+                          <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
+                             <Landmark size={12} className="text-slate-400" /> Prop. Tax
+                          </label>
+                          <span className="text-xs font-medium text-slate-600">{formatCurrency(monthlyTax)}/mo</span>
                        </div>
-                       <div className="h-2.5 w-full bg-slate-200 rounded-full overflow-hidden flex">
-                          <div className="bg-indigo-500 h-full" style={{ width: `${(1 - (currentBalance/loanAmount))*100}%` }}></div>
+                       <div className="flex items-center gap-2">
+                          <input 
+                             type="range" min="0" max="4" step="0.1"
+                             value={taxRate}
+                             onChange={(e) => setTaxRate(Number(e.target.value))}
+                             className="flex-1 h-1.5 bg-slate-200 rounded appearance-none cursor-pointer accent-slate-500"
+                          />
+                          <div className="w-16 relative">
+                             <input 
+                                type="number" step="0.1"
+                                value={taxRate}
+                                onChange={(e) => setTaxRate(Number(e.target.value))}
+                                className="w-full p-1 pr-4 text-xs border border-slate-300 rounded text-right"
+                             />
+                             <span className="absolute right-1 top-1/2 -translate-y-1/2 text-[10px] text-slate-400">%</span>
+                          </div>
                        </div>
                     </div>
-                  )}
+
+                    {/* Home Insurance */}
+                    <div className="space-y-2">
+                       <div className="flex justify-between items-baseline">
+                          <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
+                             <Shield size={12} className="text-slate-400" /> Insurance
+                          </label>
+                          <span className="text-xs font-medium text-slate-600">{formatCurrency(monthlyInsurance)}/mo</span>
+                       </div>
+                       <div className="flex items-center gap-2">
+                          <input 
+                             type="range" min="0" max="2" step="0.05"
+                             value={insuranceRate}
+                             onChange={(e) => setInsuranceRate(Number(e.target.value))}
+                             className="flex-1 h-1.5 bg-slate-200 rounded appearance-none cursor-pointer accent-slate-500"
+                          />
+                          <div className="w-16 relative">
+                             <input 
+                                type="number" step="0.05"
+                                value={insuranceRate}
+                                onChange={(e) => setInsuranceRate(Number(e.target.value))}
+                                className="w-full p-1 pr-4 text-xs border border-slate-300 rounded text-right"
+                             />
+                             <span className="absolute right-1 top-1/2 -translate-y-1/2 text-[10px] text-slate-400">%</span>
+                          </div>
+                       </div>
+                    </div>
+
+                    {/* PMI */}
+                    <div className="space-y-2">
+                       <div className="flex justify-between items-baseline">
+                          <div className="flex items-center gap-2">
+                             <input 
+                               type="checkbox" 
+                               checked={includePmi} 
+                               onChange={(e) => setIncludePmi(e.target.checked)}
+                               className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 h-3 w-3"
+                             />
+                             <label className="text-xs font-bold text-slate-700">PMI</label>
+                          </div>
+                          <span className="text-xs font-medium text-slate-600">{formatCurrency(monthlyPmi)}/mo</span>
+                       </div>
+                       <div className={`flex items-center gap-2 ${!includePmi ? 'opacity-50 pointer-events-none' : ''}`}>
+                          <input 
+                             type="range" min="0.1" max="2" step="0.1"
+                             value={pmiRate}
+                             onChange={(e) => setPmiRate(Number(e.target.value))}
+                             className="flex-1 h-1.5 bg-slate-200 rounded appearance-none cursor-pointer accent-orange-500"
+                          />
+                          <div className="w-16 relative">
+                             <input 
+                                type="number" step="0.1"
+                                value={pmiRate}
+                                onChange={(e) => setPmiRate(Number(e.target.value))}
+                                className="w-full p-1 pr-4 text-xs border border-slate-300 rounded text-right"
+                             />
+                             <span className="absolute right-1 top-1/2 -translate-y-1/2 text-[10px] text-slate-400">%</span>
+                          </div>
+                       </div>
+                    </div>
+
+                    {/* HOA */}
+                    <div className="space-y-2">
+                       <div className="flex justify-between items-baseline">
+                          <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
+                             <Building2 size={12} className="text-slate-400" /> HOA
+                          </label>
+                          <span className="text-xs font-medium text-slate-600">{formatCurrency(hoaFees)}/mo</span>
+                       </div>
+                       <div className="relative">
+                          <CurrencyInput 
+                             value={hoaFees}
+                             onChange={setHoaFees}
+                             symbol={currencyConfig.symbol}
+                             className="w-full p-1.5 pl-6 text-xs font-bold border border-slate-200 rounded text-slate-700"
+                          />
+                       </div>
+                    </div>
+
+                 </div>
+              </div>
+
+              {/* Results Bar */}
+              <div className="bg-slate-100 px-6 py-5 border-t border-slate-200">
+                  <div className="flex flex-col md:flex-row justify-between items-end mb-4 gap-4">
+                     <div>
+                       <div className="text-xs text-slate-500 uppercase font-bold mb-1">Total Monthly Payment</div>
+                       <div className="text-3xl font-bold text-indigo-900">{formatCurrency(totalMonthlyPayment)}</div>
+                       <div className="flex items-center gap-3 mt-1 text-xs">
+                          <span className="flex items-center gap-1 text-slate-600">
+                             <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
+                             P&I: {formatCurrency(baseSchedule.monthlyPayment)}
+                          </span>
+                          <span className="flex items-center gap-1 text-slate-600">
+                             <div className="w-2 h-2 rounded-full bg-slate-400"></div>
+                             Escrow: {formatCurrency(monthlyFeesTotal)}
+                          </span>
+                       </div>
+                     </div>
+                     
+                     {mode === 'existing' && (
+                        <div className="text-right w-full md:w-auto">
+                           <div className="text-xs text-slate-500 uppercase font-bold">Current Loan Balance</div>
+                           <div className="text-xl font-bold text-slate-700">{formatCurrency(currentBalance)}</div>
+                           
+                           {/* Equity Bar */}
+                           <div className="mt-2 w-full md:w-40 ml-auto">
+                              <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden flex">
+                                  <div className="bg-emerald-500 h-full" style={{ width: `${100 - currentLtv}%` }}></div>
+                              </div>
+                              <div className="text-[10px] text-slate-500 text-right mt-0.5">
+                                 {(100 - currentLtv).toFixed(0)}% Equity
+                              </div>
+                           </div>
+                        </div>
+                     )}
+                  </div>
               </div>
            </div>
 
@@ -321,13 +486,13 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ currency
            <div className="bg-emerald-50 p-6 rounded-2xl border border-emerald-100 shadow-sm">
               <div className="flex justify-between items-start mb-4">
                 <h3 className="text-sm font-bold uppercase tracking-wider text-emerald-800 flex items-center gap-2">
-                   <TrendingDown size={18} /> Extra Payments
+                   <TrendingDown size={18} /> Extra Principal
                 </h3>
               </div>
               
               <div className="flex flex-col md:flex-row gap-8 items-center">
                  <div className="w-full md:w-1/2 space-y-3">
-                    <label className="text-sm font-bold text-emerald-900">Add Monthly Principal</label>
+                    <label className="text-sm font-bold text-emerald-900">Add Monthly Payment</label>
                     <div className="flex items-center gap-4">
                        <input 
                          type="range" 
@@ -367,7 +532,7 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ currency
                    </div>
                  ) : (
                    <div className="w-full md:w-1/2 text-center text-emerald-600/60 text-sm italic">
-                      Move slider to see savings...
+                      Move slider to see interest savings...
                    </div>
                  )}
               </div>
@@ -375,7 +540,7 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ currency
 
            {/* Chart */}
            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm h-[320px] flex flex-col">
-              <h3 className="text-xs font-bold uppercase text-slate-400 mb-4">Balance Projection</h3>
+              <h3 className="text-xs font-bold uppercase text-slate-400 mb-4">Loan Balance Projection</h3>
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                   <defs>
@@ -423,44 +588,20 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ currency
 
               <div className="space-y-5 mb-6 bg-white p-5 rounded-xl border border-slate-200">
                  
-                 {/* Home Value & LTV */}
+                 {/* LTV */}
                  <div className="space-y-3">
-                    <label className="text-xs font-bold text-slate-500 mb-1 block">Est. Home Value</label>
-                    <CurrencyInput 
-                      value={homeValue} 
-                      onChange={setHomeValue} 
-                      symbol={currencyConfig.symbol}
-                      className="w-full p-2 pl-8 border border-slate-200 rounded font-semibold text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none"
-                    />
-                    <input 
-                         type="range" 
-                         min={currentBalance} 
-                         max={currentBalance * 2}
-                         step={5000}
-                         value={homeValue}
-                         onChange={(e) => setHomeValue(Number(e.target.value))}
-                         className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-500"
-                    />
-                    
                     <div className="flex items-center justify-between bg-slate-50 p-2 rounded border border-slate-100">
-                       <span className="text-xs text-slate-400 font-medium">Loan-to-Value (LTV)</span>
+                       <span className="text-xs text-slate-400 font-medium">Current LTV</span>
                        <div className="flex items-center gap-2">
-                          <input 
-                             type="range"
-                             min="10" max="120"
-                             value={ltv}
-                             onChange={(e) => handleLtvChange(Number(e.target.value))}
-                             className="w-20 h-1.5 bg-slate-300 rounded-lg appearance-none cursor-pointer accent-amber-500"
-                          />
-                          <span className={`text-xs font-bold ${ltv > 80 ? 'text-orange-500' : 'text-emerald-500'}`}>
-                             {ltv.toFixed(0)}%
+                          <span className={`text-xs font-bold ${currentLtv > 80 ? 'text-orange-500' : 'text-emerald-500'}`}>
+                             {currentLtv.toFixed(1)}%
                           </span>
                        </div>
                     </div>
                  </div>
 
                  <div className="space-y-1 pt-2 border-t border-slate-50">
-                     <label className="text-xs font-bold text-slate-500 mb-1 block">Closing Costs</label>
+                     <label className="text-xs font-bold text-slate-500 mb-1 block">Refi Closing Costs</label>
                      <div className="flex items-center gap-4">
                          <div className="flex-1">
                            <input 
@@ -538,11 +679,14 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ currency
                        
                        <div className="p-4 grid grid-cols-2 gap-4">
                           <div>
-                             <div className="text-[10px] text-slate-400 uppercase font-bold">New Payment</div>
-                             <div className="text-lg font-bold text-slate-800">{formatCurrency(scenario.newMonthlyPayment)}</div>
+                             <div className="text-[10px] text-slate-400 uppercase font-bold">Total New Payment</div>
+                             {/* Display P&I + Fees */}
+                             <div className="text-lg font-bold text-slate-800">{formatCurrency(scenario.newMonthlyPayment + monthlyFeesTotal)}</div>
+                             
+                             {/* Savings is still based on P&I comparison for correctness */}
                              <div className={`text-xs font-medium mt-1 flex items-center gap-1 ${scenario.monthlySavings > 0 ? 'text-emerald-600' : 'text-red-500'}`}>
                                 {scenario.monthlySavings > 0 ? <TrendingDown size={12} /> : <TrendingDown size={12} className="rotate-180" />}
-                                {scenario.monthlySavings > 0 ? 'Save' : 'Pay'} {formatCurrency(Math.abs(scenario.monthlySavings))}
+                                {scenario.monthlySavings > 0 ? 'Save' : 'Pay'} {formatCurrency(Math.abs(scenario.monthlySavings))} <span className="text-slate-400 text-[9px]">(P&I)</span>
                              </div>
                           </div>
 
