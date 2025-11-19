@@ -22,7 +22,10 @@ export interface UserInput {
   retirementAge: number;
   lifeExpectancy: number;
   currentPortfolio: number;
-  currentRothBalance: number; // New: Portion of currentPortfolio that is Roth
+  
+  // Portfolio Breakdown
+  currentRothBalance: number; 
+  currentBrokerageBalance: number; // New: Taxable Brokerage portion
   
   // Aggregate fields used for calculation
   monthlyContribution: number; 

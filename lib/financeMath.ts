@@ -134,8 +134,6 @@ export const runSimulation = (inputs: UserInput): SimulationResult => {
   const contribRoth = inputs.savingsRoth401k + inputs.savingsRothIRA;
   const contribBrokerage = inputs.savingsBrokerage;
   const contribTrad = inputs.savingsTrad401k; 
-  // Note: We prioritize explicit breakdown. If breakdown is 0 but total > 0 (legacy/fallback), we default to Trad.
-  // But InputPanel ensures sync, so we trust specific fields if they sum > 0.
   
   const breakdownSum = contribRoth + contribBrokerage + contribTrad;
   
@@ -170,14 +168,18 @@ export const runSimulation = (inputs: UserInput): SimulationResult => {
   const projections: YearlyProjection[] = [];
   
   // Current Balance Buckets
-  // We assume Current Portfolio is split purely between Trad and Roth for simplicity 
-  // (unless we added a Current Brokerage input, which we haven't yet). 
-  // So existing Brokerage balances are effectively treated as Traditional (Taxable) which is conservative.
+  // User inputs determine the starting buckets explicitly.
   const safeCurrentRoth = Math.min(inputs.currentRothBalance || 0, inputs.currentPortfolio);
+  const safeCurrentBrokerage = Math.min(inputs.currentBrokerageBalance || 0, inputs.currentPortfolio - safeCurrentRoth);
+  
   let balanceRoth = safeCurrentRoth;
-  let balanceTrad = Math.max(0, inputs.currentPortfolio - safeCurrentRoth);
-  let balanceBrokerage = 0; 
-  let basisBrokerage = 0; // Tracks principal for tax calculations
+  let balanceBrokerage = safeCurrentBrokerage;
+  // Traditional is the remainder
+  let balanceTrad = Math.max(0, inputs.currentPortfolio - safeCurrentRoth - safeCurrentBrokerage);
+  
+  // Tracks principal for tax calculations. We assume the current Brokerage balance is the "Cost Basis" 
+  // (principal) for the simulation, so we only tax future growth.
+  let basisBrokerage = safeCurrentBrokerage; 
 
   let totalContributions = 0;
   let solvencyAge: number | null = null;
@@ -208,6 +210,7 @@ export const runSimulation = (inputs: UserInput): SimulationResult => {
       const brokerageGains = Math.max(0, balanceBrokerage - basisBrokerage);
       const brokerageAfterTax = basisBrokerage + (brokerageGains * (1 - CAP_GAINS_RATE));
       
+      // Approximate liquidation value (if we sold everything today)
       const totalAfterTaxNominal = balanceRoth + brokerageAfterTax + (balanceTrad * (1 - taxRate));
       
       // Reference Target Lines
@@ -233,7 +236,7 @@ export const runSimulation = (inputs: UserInput): SimulationResult => {
        balanceRoth += balanceRoth * monthlyRate + effectiveRoth;
        
        balanceBrokerage += balanceBrokerage * monthlyRate + effectiveBrokerage;
-       basisBrokerage += effectiveBrokerage;
+       basisBrokerage += effectiveBrokerage; // Add new principal to basis
 
        totalContributions += inputs.monthlyContribution;
     } else {
@@ -267,8 +270,6 @@ export const runSimulation = (inputs: UserInput): SimulationResult => {
        if (remainingCashNeeded > 0) {
           // Estimate tax drag on brokerage withdrawal
           // Simplified: We assume the withdrawal has the same basis/gain ratio as the whole account
-          // cashNeeded = grossWithdrawal - tax
-          // tax = (grossWithdrawal * gainRatio) * CapGainsRate
           const totalBrok = balanceBrokerage;
           if (totalBrok > 0) {
              const gainRatio = Math.max(0, (balanceBrokerage - basisBrokerage) / balanceBrokerage);
@@ -314,19 +315,11 @@ export const runSimulation = (inputs: UserInput): SimulationResult => {
   const finalGrossNominal = retirementProj ? retirementProj.balanceNominal : 0;
   const finalGrossReal = retirementProj ? retirementProj.balanceReal : 0;
 
-  // Re-run accumulation to get exact buckets at retirement for snapshot
-  // (Or we could store them in projection, but keeping types simple)
-  // We will just approximate liquidation value logic based on end of sim loop if retired, 
-  // but wait, loop goes to LifeExpectancy. We need value AT retirement.
-  // Let's just use the logic derived inside the loop (snapshots).
-  
-  // We need to find the liquidation value at retirement age specifically
-  // We can re-calculate it using the retirementProj balance if we knew the split.
-  // Since we don't store split in YearlyProjection, we do a quick fast-forward calc:
-  let rTrad = Math.max(0, inputs.currentPortfolio - safeCurrentRoth);
+  // Recalculate liquidation value at retirement specific timestamp for accuracy
+  let rTrad = Math.max(0, inputs.currentPortfolio - safeCurrentRoth - safeCurrentBrokerage);
   let rRoth = safeCurrentRoth;
-  let rBrok = 0;
-  let rBasisBrok = 0;
+  let rBrok = safeCurrentBrokerage;
+  let rBasisBrok = safeCurrentBrokerage;
   const accumMonths = yearsToRetirement * 12;
   for(let i=0; i<accumMonths; i++) {
       rTrad += rTrad * monthlyRate + effectiveTrad;
@@ -341,7 +334,6 @@ export const runSimulation = (inputs: UserInput): SimulationResult => {
   const liquidationReal = adjustFutureToReal(liquidationNominal, inflationRate, yearsToRetirement);
 
   // Estimate Income Generation Potential
-  // Net Income = (Trad * SafeRate * (1-Tax)) + (Roth * SafeRate) + (Brok * SafeRate * (1 - EffectiveDrag))
   const brokDrag = (rBrok > 0 ? ((rBrok - rBasisBrok)/rBrok) : 0) * CAP_GAINS_RATE;
   
   const safeIncomeTrad = rTrad * withdrawRate * (1 - taxRate);

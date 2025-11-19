@@ -3,53 +3,14 @@ import React, { useState } from 'react';
 import { UserInput, InvestmentStrategyType, CurrencyCode } from '../lib/types';
 import { INVESTMENT_STRATEGIES, CURRENCIES } from '../lib/constants';
 import { Tooltip } from './ui/Tooltip';
+import { CurrencyInput } from './ui/CurrencyInput';
+import { DecimalInput } from './ui/DecimalInput';
 import { DollarSign, Euro, PoundSterling, Percent, PiggyBank, ChevronUp, Lightbulb, AlertCircle, PieChart, Activity, ShieldCheck, TrendingUp, Briefcase, Wallet, Landmark } from 'lucide-react';
 
 interface InputPanelProps {
   inputs: UserInput;
   onChange: (newInputs: UserInput) => void;
 }
-
-const MoneyInput = ({ 
-  value, 
-  onChange, 
-  className, 
-  placeholder,
-  ...props 
-}: { 
-  value: number; 
-  onChange: (val: string) => void;
-  className?: string;
-  placeholder?: string;
-} & Omit<React.InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange'>) => {
-  
-  // Format with commas, or empty string if 0 (to show placeholder)
-  const displayValue = value === 0 ? '' : value.toLocaleString('en-US');
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Remove commas and allow digits only
-    const raw = e.target.value.replace(/[^0-9]/g, '');
-    
-    if (raw === '') {
-      onChange('0');
-    } else {
-      // Parse integer to strip leading zeros (e.g. "05" -> 5)
-      onChange(parseInt(raw, 10).toString());
-    }
-  };
-
-  return (
-    <input
-      type="text"
-      inputMode="numeric"
-      value={displayValue}
-      onChange={handleInputChange}
-      className={className}
-      placeholder={placeholder || "0"}
-      {...props}
-    />
-  );
-};
 
 export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
   const [showPortfolioSplit, setShowPortfolioSplit] = useState(false);
@@ -90,33 +51,50 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
     return null;
   };
 
-  const handleChange = (field: keyof UserInput, rawValue: string | CurrencyCode) => {
+  const handleChange = (field: keyof UserInput, rawValue: string | CurrencyCode | number) => {
     if (field === 'currency') {
       onChange({ ...inputs, currency: rawValue as CurrencyCode });
       return;
     }
 
-    const value = parseFloat(rawValue as string);
-    const numValue = isNaN(value) ? 0 : value;
+    // If number, use as is (from DecimalInput/CurrencyInput), else parse string
+    const numValue = typeof rawValue === 'number' ? rawValue : parseFloat(rawValue as string);
+    const finalValue = isNaN(numValue) ? 0 : numValue;
     
     // Construct proposed state for validation
-    const proposedInputs = { ...inputs, [field]: numValue };
+    const proposedInputs = { ...inputs, [field]: finalValue };
     
     // Efficiency: Enforce constraints immediately
     if (field === 'currentPortfolio') {
-      if (numValue < proposedInputs.currentRothBalance) {
-        proposedInputs.currentRothBalance = numValue;
-      }
+       // Ensure parts don't exceed total
+       const currentRoth = proposedInputs.currentRothBalance || 0;
+       const currentBrokerage = proposedInputs.currentBrokerageBalance || 0;
+       if (currentRoth + currentBrokerage > finalValue) {
+         if (currentRoth > finalValue) {
+           proposedInputs.currentRothBalance = finalValue;
+           proposedInputs.currentBrokerageBalance = 0;
+         } else {
+           proposedInputs.currentBrokerageBalance = finalValue - currentRoth;
+         }
+       }
     }
     
     if (field === 'currentRothBalance') {
-       if (numValue > proposedInputs.currentPortfolio) {
-         proposedInputs.currentRothBalance = proposedInputs.currentPortfolio;
+       const currentBrokerage = proposedInputs.currentBrokerageBalance || 0;
+       if (finalValue + currentBrokerage > proposedInputs.currentPortfolio) {
+         proposedInputs.currentRothBalance = Math.max(0, proposedInputs.currentPortfolio - currentBrokerage);
+       }
+    }
+
+    if (field === 'currentBrokerageBalance') {
+       const currentRoth = proposedInputs.currentRothBalance || 0;
+       if (finalValue + currentRoth > proposedInputs.currentPortfolio) {
+         proposedInputs.currentBrokerageBalance = Math.max(0, proposedInputs.currentPortfolio - currentRoth);
        }
     }
 
     // Run Validation
-    const error = validateField(field, numValue, proposedInputs);
+    const error = validateField(field, finalValue, proposedInputs);
     
     setErrors(prev => {
       const newErrors = { ...prev };
@@ -125,10 +103,10 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
       
       // Clear cross-field errors
       if (field === 'currentAge' && newErrors['retirementAge']) {
-         if (proposedInputs.retirementAge > numValue) delete newErrors['retirementAge'];
+         if (proposedInputs.retirementAge > finalValue) delete newErrors['retirementAge'];
       }
       if (field === 'retirementAge' && newErrors['currentAge']) {
-         if (numValue > proposedInputs.currentAge) delete newErrors['currentAge'];
+         if (finalValue > proposedInputs.currentAge) delete newErrors['currentAge'];
       }
       return newErrors;
     });
@@ -138,9 +116,8 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
 
   const handleContributionBreakdownChange = (
     subField: 'savingsTrad401k' | 'savingsRoth401k' | 'savingsRothIRA' | 'savingsBrokerage',
-    rawValue: string
+    val: number
   ) => {
-    const val = parseInt(rawValue, 10) || 0;
     const newInputs = { ...inputs, [subField]: val };
 
     // Recalculate Aggregates
@@ -158,15 +135,19 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
     onChange({ ...inputs, strategy });
   };
 
+  // Helper for auto-selecting input content on focus
+  const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => e.target.select();
+
+  // Calc Derived Traditional Balance
+  const currentTradBalance = Math.max(0, inputs.currentPortfolio - (inputs.currentRothBalance || 0) - (inputs.currentBrokerageBalance || 0));
+
   // Dynamic Tip Logic
   const getFinancialTip = () => {
     const total401k = inputs.savingsTrad401k + inputs.savingsRoth401k;
     const annual401k = total401k * 12;
-    const annualIRA = inputs.savingsRothIRA * 12;
     const totalAnnualSavings = inputs.monthlyContribution * 12;
     
     // 1. Catch-up Contributions (Age 50+)
-    // 2025 limit is approx $23,500 + $7,500 catchup = $31,000
     if (inputs.currentAge >= 50) {
        if (annual401k > 23000 && annual401k < 30000) { 
          return { 
@@ -176,10 +157,7 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
        }
     }
 
-    // 2. Backdoor Roth Strategy (High Income Proxy via Savings)
-    // If user is saving significantly (> $6k/yr in IRA) but explicitly NOT using Roth IRA (maybe they think they can't?)
-    // OR if they are using Roth IRA but might be over limit.
-    // Let's provide a tip if they have high savings but low Roth IRA, or just general high savings info.
+    // 2. Backdoor Roth Strategy
     if (totalAnnualSavings > 30000 && inputs.savingsRothIRA === 0) {
       return { 
         title: "Backdoor Roth Strategy", 
@@ -188,7 +166,6 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
     }
 
     // 3. Brokerage Efficiency
-    // If putting money in brokerage but haven't maxed 401k (approx $23,500)
     if (inputs.savingsBrokerage > 0 && annual401k < 23500) {
       return { 
         title: "Maximize Tax-Advantaged Space", 
@@ -197,7 +174,6 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
     }
 
     // 4. Mega Backdoor Roth
-    // If maxing 401k and still saving in brokerage
     if (annual401k >= 23000 && inputs.savingsBrokerage > 500) {
        return {
          title: "Mega Backdoor Roth",
@@ -206,10 +182,8 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
     }
 
     // 5. HSA
-    // Suggest HSA if age is appropriate and they are saving well
     if (inputs.currentAge < 65 && inputs.monthlyContribution > 500) {
-       // Rotation check or simple static check based on other fields
-       if (inputs.monthlyContribution % 100 !== 0) { // Arbitrary deterministic check to vary tips
+       if (inputs.monthlyContribution % 100 !== 0) { 
          return { 
             title: "The Triple Tax Threat", 
             text: "Don't forget the Health Savings Account (HSA). It offers tax-deductible contributions, tax-free growth, and tax-free withdrawals for medical expenses. It's a stealth retirement account." 
@@ -265,6 +239,7 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
               type="number" 
               value={inputs.currentAge}
               onChange={(e) => handleChange('currentAge', e.target.value)}
+              onFocus={handleFocus}
               className={`w-full p-2 rounded border outline-none transition bg-white text-slate-900 ${errors.currentAge ? 'border-red-400 bg-red-50' : 'border-slate-200 focus:ring-2 focus:ring-emerald-500'}`}
             />
             {errors.currentAge && <div className="text-[10px] text-red-500 flex items-center gap-1"><AlertCircle size={10}/> {errors.currentAge}</div>}
@@ -275,6 +250,7 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
               type="number" 
               value={inputs.retirementAge}
               onChange={(e) => handleChange('retirementAge', e.target.value)}
+              onFocus={handleFocus}
               className={`w-full p-2 rounded border outline-none transition bg-white text-slate-900 ${errors.retirementAge ? 'border-red-400 bg-red-50' : 'border-slate-200 focus:ring-2 focus:ring-emerald-500'}`}
             />
              {errors.retirementAge && <div className="text-[10px] text-red-500 flex items-center gap-1"><AlertCircle size={10}/> {errors.retirementAge}</div>}
@@ -298,25 +274,21 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
           <div className={`relative transition-all duration-300 ${showPortfolioSplit ? 'bg-white p-3 rounded-lg border border-slate-200 shadow-sm' : ''}`}>
             
             {/* Main Input */}
-            <div className="relative">
-              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-                <CurrencyIcon size={16} />
-              </div>
-              <MoneyInput 
-                value={inputs.currentPortfolio}
-                onChange={(val) => handleChange('currentPortfolio', val)}
-                className="w-full pl-9 p-2 rounded border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none font-semibold text-slate-700 bg-white"
-                placeholder="Total Savings"
-              />
-            </div>
+            <CurrencyInput 
+               value={inputs.currentPortfolio}
+               onChange={(val) => handleChange('currentPortfolio', val)}
+               className="w-full pl-9 p-2 rounded border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none font-semibold text-slate-700 bg-white"
+               placeholder="Total Savings"
+               symbol={<CurrencyIcon size={16} />}
+            />
             {errors.currentPortfolio && <div className="text-[10px] text-red-500 mt-1">{errors.currentPortfolio}</div>}
             
             {/* Split Details (Conditional) */}
             {showPortfolioSplit && (
-               <div className="mt-4 pt-3 border-t border-slate-100 animate-fade-in">
-                 <div className="flex justify-between items-center mb-3">
+               <div className="mt-4 pt-3 border-t border-slate-100 animate-fade-in space-y-3">
+                 <div className="flex justify-between items-center mb-1">
                     <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
-                      <div className="w-2 h-2 rounded-full bg-emerald-500"></div> Roth/Tax-Free
+                       Breakdown by Tax Status
                     </label>
                     <button 
                       onClick={() => setShowPortfolioSplit(false)} 
@@ -326,32 +298,68 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
                     </button>
                  </div>
 
-                 <div className="flex items-center gap-3">
-                    <input 
-                      type="range" 
-                      min="0" 
-                      max={inputs.currentPortfolio} 
-                      step={inputs.currentPortfolio > 50000 ? 1000 : 100}
-                      value={inputs.currentRothBalance || 0}
-                      onChange={(e) => handleChange('currentRothBalance', e.target.value)}
-                      className="flex-1 h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-emerald-500"
-                    />
-                    <div className="w-24 text-right relative">
-                       <div className="absolute left-1 top-1/2 -translate-y-1/2 text-emerald-300">
-                         <CurrencyIcon size={12} />
-                       </div>
-                       <MoneyInput 
-                          value={inputs.currentRothBalance || 0}
-                          onChange={(val) => handleChange('currentRothBalance', val)}
-                          className="w-full pl-4 p-1 text-right text-sm font-bold text-emerald-600 border border-slate-200 rounded hover:border-emerald-300 focus:border-emerald-500 outline-none focus:ring-1 focus:ring-emerald-200 bg-white"
-                       />
-                    </div>
+                 {/* Roth Row */}
+                 <div>
+                   <label className="text-[10px] text-emerald-600 font-bold flex justify-between mb-1">
+                      <span>Roth (Tax-Free)</span>
+                   </label>
+                   <div className="flex items-center gap-3">
+                      <input 
+                        type="range" 
+                        min="0" 
+                        max={inputs.currentPortfolio} 
+                        step={inputs.currentPortfolio > 50000 ? 1000 : 100}
+                        value={inputs.currentRothBalance || 0}
+                        onChange={(e) => handleChange('currentRothBalance', e.target.value)}
+                        className="flex-1 h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+                      />
+                      <div className="w-24 text-right relative">
+                         <CurrencyInput 
+                            value={inputs.currentRothBalance || 0}
+                            onChange={(val) => handleChange('currentRothBalance', val)}
+                            className="w-full pl-4 p-1 text-right text-sm font-bold text-emerald-600 border border-slate-200 rounded hover:border-emerald-300 focus:border-emerald-500 outline-none focus:ring-1 focus:ring-emerald-200 bg-white"
+                            symbol={<span className="text-emerald-300 text-xs"><CurrencyIcon size={12} /></span>}
+                         />
+                      </div>
+                   </div>
+                 </div>
+
+                 {/* Brokerage Row */}
+                 <div>
+                   <label className="text-[10px] text-slate-500 font-bold flex justify-between mb-1">
+                      <span>Brokerage (Taxable)</span>
+                   </label>
+                   <div className="flex items-center gap-3">
+                      <input 
+                        type="range" 
+                        min="0" 
+                        max={inputs.currentPortfolio} 
+                        step={inputs.currentPortfolio > 50000 ? 1000 : 100}
+                        value={inputs.currentBrokerageBalance || 0}
+                        onChange={(e) => handleChange('currentBrokerageBalance', e.target.value)}
+                        className="flex-1 h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-slate-400"
+                      />
+                      <div className="w-24 text-right relative">
+                         <CurrencyInput 
+                            value={inputs.currentBrokerageBalance || 0}
+                            onChange={(val) => handleChange('currentBrokerageBalance', val)}
+                            className="w-full pl-4 p-1 text-right text-sm font-bold text-slate-600 border border-slate-200 rounded hover:border-slate-300 focus:border-slate-500 outline-none focus:ring-1 focus:ring-slate-200 bg-white"
+                            symbol={<span className="text-slate-300 text-xs"><CurrencyIcon size={12} /></span>}
+                         />
+                      </div>
+                   </div>
+                 </div>
+
+                 {/* Calculated Traditional Row */}
+                 <div className="flex justify-between items-center bg-slate-50 p-2 rounded border border-slate-100">
+                    <label className="text-[10px] text-slate-500 font-bold">
+                      Traditional 401k / Pre-Tax <span className="font-normal">(Remainder)</span>
+                    </label>
+                    <span className="text-xs font-bold text-slate-700">
+                       {currencySymbol}{currentTradBalance.toLocaleString()}
+                    </span>
                  </div>
                  
-                 <div className="flex justify-between text-[10px] text-slate-400 mt-1 px-1">
-                    <span>Traditional: {currencySymbol}{Math.max(0, inputs.currentPortfolio - (inputs.currentRothBalance || 0)).toLocaleString()}</span>
-                    <span>Roth: {inputs.currentPortfolio > 0 ? Math.round(((inputs.currentRothBalance || 0) / inputs.currentPortfolio) * 100) : 0}%</span>
-                 </div>
                </div>
             )}
           </div>
@@ -377,28 +385,24 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
                <div className="grid grid-cols-2 gap-3">
                  <div>
                     <label className="block text-[10px] text-slate-500 mb-1">Traditional 401k/403b</label>
-                    <div className="relative">
-                       <div className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-xs"><CurrencyIcon size={12}/></div>
-                       <MoneyInput 
-                          value={inputs.savingsTrad401k || 0}
-                          onChange={(val) => handleContributionBreakdownChange('savingsTrad401k', val)}
-                          className="w-full pl-6 p-1.5 text-sm border border-slate-200 rounded focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50"
-                          placeholder="0"
-                       />
-                    </div>
+                    <CurrencyInput 
+                       value={inputs.savingsTrad401k || 0}
+                       onChange={(val) => handleContributionBreakdownChange('savingsTrad401k', val)}
+                       className="w-full pl-6 p-1.5 text-sm border border-slate-200 rounded focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50"
+                       placeholder="0"
+                       symbol={<span className="text-slate-400 text-xs"><CurrencyIcon size={12}/></span>}
+                    />
                     <div className="text-[9px] text-slate-400 mt-0.5">Pre-Tax</div>
                  </div>
                  <div>
                     <label className="block text-[10px] text-emerald-600 mb-1">Roth 401k/403b</label>
-                     <div className="relative">
-                       <div className="absolute left-2 top-1/2 -translate-y-1/2 text-emerald-300 text-xs"><CurrencyIcon size={12}/></div>
-                       <MoneyInput 
-                          value={inputs.savingsRoth401k || 0}
-                          onChange={(val) => handleContributionBreakdownChange('savingsRoth401k', val)}
-                          className="w-full pl-6 p-1.5 text-sm border border-emerald-100 rounded focus:ring-2 focus:ring-emerald-500 outline-none bg-emerald-50 text-emerald-800 font-medium"
-                          placeholder="0"
-                       />
-                    </div>
+                    <CurrencyInput 
+                       value={inputs.savingsRoth401k || 0}
+                       onChange={(val) => handleContributionBreakdownChange('savingsRoth401k', val)}
+                       className="w-full pl-6 p-1.5 text-sm border border-emerald-100 rounded focus:ring-2 focus:ring-emerald-500 outline-none bg-emerald-50 text-emerald-800 font-medium"
+                       placeholder="0"
+                       symbol={<span className="text-emerald-300 text-xs"><CurrencyIcon size={12}/></span>}
+                    />
                     <div className="text-[9px] text-emerald-500 mt-0.5">Tax-Free Growth</div>
                  </div>
                </div>
@@ -415,27 +419,23 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
                <div className="grid grid-cols-2 gap-3">
                  <div>
                     <label className="block text-[10px] text-emerald-600 mb-1">Roth IRA / Backdoor</label>
-                    <div className="relative">
-                       <div className="absolute left-2 top-1/2 -translate-y-1/2 text-emerald-300 text-xs"><CurrencyIcon size={12}/></div>
-                       <MoneyInput 
-                          value={inputs.savingsRothIRA || 0}
-                          onChange={(val) => handleContributionBreakdownChange('savingsRothIRA', val)}
-                          className="w-full pl-6 p-1.5 text-sm border border-emerald-100 rounded focus:ring-2 focus:ring-emerald-500 outline-none bg-emerald-50 text-emerald-800 font-medium"
-                          placeholder="0"
-                       />
-                    </div>
+                    <CurrencyInput 
+                       value={inputs.savingsRothIRA || 0}
+                       onChange={(val) => handleContributionBreakdownChange('savingsRothIRA', val)}
+                       className="w-full pl-6 p-1.5 text-sm border border-emerald-100 rounded focus:ring-2 focus:ring-emerald-500 outline-none bg-emerald-50 text-emerald-800 font-medium"
+                       placeholder="0"
+                       symbol={<span className="text-emerald-300 text-xs"><CurrencyIcon size={12}/></span>}
+                    />
                  </div>
                  <div>
                     <label className="block text-[10px] text-slate-500 mb-1">Brokerage / Savings</label>
-                     <div className="relative">
-                       <div className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-xs"><CurrencyIcon size={12}/></div>
-                       <MoneyInput 
-                          value={inputs.savingsBrokerage || 0}
-                          onChange={(val) => handleContributionBreakdownChange('savingsBrokerage', val)}
-                          className="w-full pl-6 p-1.5 text-sm border border-slate-200 rounded focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50"
-                          placeholder="0"
-                       />
-                    </div>
+                    <CurrencyInput 
+                       value={inputs.savingsBrokerage || 0}
+                       onChange={(val) => handleContributionBreakdownChange('savingsBrokerage', val)}
+                       className="w-full pl-6 p-1.5 text-sm border border-slate-200 rounded focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50"
+                       placeholder="0"
+                       symbol={<span className="text-slate-400 text-xs"><CurrencyIcon size={12}/></span>}
+                    />
                     <div className="text-[9px] text-slate-400 mt-0.5">Regular Taxable</div>
                  </div>
                </div>
@@ -482,16 +482,12 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
                {inputs.targetType === 'income' ? "In Today's Dollars (Real)" : "In Future Dollars (Nominal)"}
             </span>
           </label>
-          <div className="relative">
-            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-               <CurrencyIcon size={16} />
-            </div>
-            <MoneyInput 
-              value={inputs.targetValue}
-              onChange={(val) => handleChange('targetValue', val)}
-              className="w-full pl-9 p-2 rounded border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none font-medium text-slate-900 bg-white"
-            />
-          </div>
+          <CurrencyInput 
+             value={inputs.targetValue}
+             onChange={(val) => handleChange('targetValue', val)}
+             className="w-full pl-9 p-2 rounded border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none font-medium text-slate-900 bg-white"
+             symbol={<span className="text-slate-400"><CurrencyIcon size={16} /></span>}
+          />
         </div>
 
         {/* Social Security Input */}
@@ -500,17 +496,13 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
             Social Security / National Pension
             <Tooltip text="Estimated monthly government benefit in today's dollars. This reduces the amount you need to withdraw from your portfolio." />
           </label>
-          <div className="relative">
-            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-               <CurrencyIcon size={16} />
-            </div>
-            <MoneyInput 
-              value={inputs.estimatedSocialSecurity}
-              onChange={(val) => handleChange('estimatedSocialSecurity', val)}
-              placeholder="e.g. 2000"
-              className="w-full pl-9 p-2 rounded border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none bg-white text-slate-900"
-            />
-          </div>
+          <CurrencyInput 
+             value={inputs.estimatedSocialSecurity}
+             onChange={(val) => handleChange('estimatedSocialSecurity', val)}
+             placeholder="e.g. 2000"
+             className="w-full pl-9 p-2 rounded border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none bg-white text-slate-900"
+             symbol={<span className="text-slate-400"><CurrencyIcon size={16} /></span>}
+          />
         </div>
 
         <div className="space-y-1">
@@ -518,16 +510,12 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
             Safe Withdrawal Rate
             <Tooltip text="The percentage of your portfolio you withdraw each year. 4% is the standard 'safe' rule." />
           </label>
-           <div className="relative">
-            <input 
-              type="number" 
-              step="0.1"
-              value={inputs.safeWithdrawalRate}
-              onChange={(e) => handleChange('safeWithdrawalRate', e.target.value)}
-              className="w-full p-2 pr-8 rounded border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none bg-white text-slate-900"
-            />
-            <Percent className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-          </div>
+           <DecimalInput 
+             value={inputs.safeWithdrawalRate}
+             onChange={(val) => handleChange('safeWithdrawalRate', val)}
+             className="w-full p-2 pr-8 rounded border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none bg-white text-slate-900"
+             rightSymbol="%"
+           />
         </div>
       </section>
 
@@ -608,34 +596,37 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
           {inputs.strategy === InvestmentStrategyType.CUSTOM && (
              <div className="mt-2 space-y-1 animate-fade-in">
               <label className="text-xs text-slate-500 font-medium">Custom Return Rate (%)</label>
-              <div className="relative">
-                <input 
-                  type="number" 
-                  min="0" max="20" step="0.1"
-                  value={inputs.customReturnRate}
-                  onChange={(e) => handleChange('customReturnRate', e.target.value)}
-                  className="w-full p-2 rounded border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none pr-8 bg-white text-slate-900"
-                />
-                <Percent className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-              </div>
+              <DecimalInput 
+                value={inputs.customReturnRate}
+                onChange={(val) => handleChange('customReturnRate', val)}
+                className="w-full p-2 rounded border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none pr-8 bg-white text-slate-900"
+                rightSymbol="%"
+              />
              </div>
           )}
         </div>
 
         {/* Inflation */}
         <div className="space-y-3">
-          <div className="flex justify-between">
+          <div className="flex justify-between items-center">
             <label className="text-sm font-medium text-slate-700 flex items-center">
               Inflation Rate
               <Tooltip text="The rate at which prices rise. Historic average is around 3%." />
             </label>
-            <span className="text-sm font-bold text-slate-700">{inputs.inflationRate}%</span>
+            <div className="w-20">
+               <DecimalInput 
+                 value={inputs.inflationRate}
+                 onChange={(val) => handleChange('inflationRate', val)}
+                 className="w-full p-1 pr-8 text-right text-sm font-bold text-slate-700 bg-transparent border-b border-slate-300 focus:border-emerald-500 outline-none"
+                 rightSymbol="%"
+               />
+            </div>
           </div>
           <input 
             type="range" 
             min="1" 
             max="10" 
-            step="0.5"
+            step="0.1"
             value={inputs.inflationRate}
             onChange={(e) => handleChange('inflationRate', e.target.value)}
             className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-emerald-600"
@@ -648,16 +639,12 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
               Est. Retirement Tax Rate (%)
               <Tooltip text="Average tax rate on withdrawals from Traditional/Taxable accounts. Roth is tax-free." />
            </label>
-           <div className="relative">
-             <input 
-                type="number" 
-                min="0" max="50"
-                value={inputs.retirementTaxRate}
-                onChange={(e) => handleChange('retirementTaxRate', e.target.value)}
-                className="w-full p-2 pr-8 rounded border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none bg-white text-slate-900"
-              />
-              <Percent className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-           </div>
+           <DecimalInput 
+              value={inputs.retirementTaxRate}
+              onChange={(val) => handleChange('retirementTaxRate', val)}
+              className="w-full p-2 pr-8 rounded border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none bg-white text-slate-900"
+              rightSymbol="%"
+           />
         </div>
       </section>
     </div>

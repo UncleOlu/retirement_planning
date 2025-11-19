@@ -1,10 +1,10 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { calculateAmortization, analyzeRefinance, RefinanceOption } from '../../lib/mortgageMath';
 import { TrendingDown, Home, Percent, CheckCircle, XCircle, Unlock, Lock, History, Shield, Building2, Landmark, Receipt, Info } from 'lucide-react';
 import { CURRENCIES } from '../../lib/constants';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Legend, ReferenceLine } from 'recharts';
 import { CurrencyInput } from '../ui/CurrencyInput';
+import { DecimalInput } from '../ui/DecimalInput';
 
 interface MortgageCalculatorProps {
   currencyCode: 'USD' | 'EUR' | 'GBP';
@@ -13,7 +13,7 @@ interface MortgageCalculatorProps {
 export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ currencyCode }) => {
   const currencyConfig = CURRENCIES[currencyCode];
   const formatCurrency = (val: number) => new Intl.NumberFormat(currencyConfig.locale, { style: 'currency', currency: currencyCode, maximumFractionDigits: 0 }).format(val);
-
+  
   // --- Main Loan State ---
   const [mode, setMode] = useState<'new' | 'existing'>('new');
   
@@ -278,15 +278,11 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ currency
 
                  <div className="space-y-1">
                     <label className="text-xs font-bold text-slate-700">Interest Rate (%)</label>
-                    <div className="relative">
-                      <input 
-                        type="number" 
-                        step="0.125"
-                        value={interestRate}
-                        onChange={(e) => setInterestRate(parseFloat(e.target.value) || 0)}
-                        className="w-full p-2 border border-slate-200 rounded font-semibold text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
-                      />
-                    </div>
+                    <DecimalInput 
+                      value={interestRate}
+                      onChange={setInterestRate}
+                      className="w-full p-2 border border-slate-200 rounded font-semibold text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
+                    />
                  </div>
 
                  <div className="space-y-1">
@@ -366,14 +362,13 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ currency
                                onChange={(e) => setTaxRate(Number(e.target.value))}
                                className="flex-1 h-1.5 bg-slate-200 rounded appearance-none cursor-pointer accent-slate-500"
                             />
-                            <div className="w-16 relative">
-                               <input 
-                                  type="number" step="0.1"
+                            <div className="w-16">
+                               <DecimalInput 
                                   value={taxRate}
-                                  onChange={(e) => setTaxRate(Number(e.target.value))}
+                                  onChange={setTaxRate}
                                   className="w-full p-1 pr-4 text-xs border border-slate-300 rounded text-right bg-white text-slate-800"
+                                  rightSymbol="%"
                                />
-                               <span className="absolute right-1 top-1/2 -translate-y-1/2 text-[10px] text-slate-400">%</span>
                             </div>
                          </div>
                        ) : (
@@ -423,14 +418,13 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ currency
                                onChange={(e) => setInsuranceRate(Number(e.target.value))}
                                className="flex-1 h-1.5 bg-slate-200 rounded appearance-none cursor-pointer accent-slate-500"
                             />
-                            <div className="w-16 relative">
-                               <input 
-                                  type="number" step="0.05"
+                            <div className="w-16">
+                               <DecimalInput 
                                   value={insuranceRate}
-                                  onChange={(e) => setInsuranceRate(Number(e.target.value))}
+                                  onChange={setInsuranceRate}
                                   className="w-full p-1 pr-4 text-xs border border-slate-300 rounded text-right bg-white text-slate-800"
+                                  rightSymbol="%"
                                />
-                               <span className="absolute right-1 top-1/2 -translate-y-1/2 text-[10px] text-slate-400">%</span>
                             </div>
                          </div>
                        ) : (
@@ -489,14 +483,13 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ currency
                                  onChange={(e) => setPmiRate(Number(e.target.value))}
                                  className="flex-1 h-1.5 bg-slate-200 rounded appearance-none cursor-pointer accent-orange-500"
                               />
-                              <div className="w-16 relative">
-                                 <input 
-                                    type="number" step="0.1"
+                              <div className="w-16">
+                                 <DecimalInput 
                                     value={pmiRate}
-                                    onChange={(e) => setPmiRate(Number(e.target.value))}
+                                    onChange={setPmiRate}
                                     className="w-full p-1 pr-4 text-xs border border-slate-300 rounded text-right bg-white text-slate-800"
+                                    rightSymbol="%"
                                  />
-                                 <span className="absolute right-1 top-1/2 -translate-y-1/2 text-[10px] text-slate-400">%</span>
                               </div>
                            </div>
                          ) : (
@@ -745,14 +738,12 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ currency
                    {overrideCurrentRate && (
                       <div className="flex items-center gap-3 animate-fade-in bg-slate-50 p-2 rounded border border-slate-100">
                          <span className="text-xs text-slate-500">Current:</span>
-                         <input 
-                           type="number" 
-                           step="0.125"
+                         <DecimalInput 
                            value={currentRateOverride}
-                           onChange={(e) => setCurrentRateOverride(parseFloat(e.target.value) || 0)}
+                           onChange={setCurrentRateOverride}
                            className="w-16 p-1 text-xs font-bold border border-slate-300 rounded bg-white text-slate-700"
+                           rightSymbol="%"
                          />
-                         <span className="text-xs text-slate-500">%</span>
                       </div>
                    )}
                  </div>

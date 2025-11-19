@@ -1,8 +1,8 @@
-
 import React, { useState, useMemo } from 'react';
 import { CURRENCIES } from '../../lib/constants';
 import { CurrencyCode } from '../../lib/types';
 import { CurrencyInput } from '../ui/CurrencyInput';
+import { DecimalInput } from '../ui/DecimalInput';
 import { Flame, TrendingUp, Target, Calendar, AlertTriangle, CheckCircle } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, ReferenceLine, Legend } from 'recharts';
 
@@ -20,7 +20,7 @@ export const FireCalculator: React.FC<FireCalculatorProps> = ({ currency }) => {
 
   const currencyConfig = CURRENCIES[currency];
   const formatCurrency = (val: number) => new Intl.NumberFormat(currencyConfig.locale, { style: 'currency', currency: currency, maximumFractionDigits: 0 }).format(val);
-
+  
   // Calculations
   const annualSavings = Math.max(0, annualIncome - annualSpending);
   const savingsRate = annualIncome > 0 ? (annualSavings / annualIncome) * 100 : 0;
@@ -148,6 +148,12 @@ export const FireCalculator: React.FC<FireCalculatorProps> = ({ currency }) => {
                       onChange={(e) => setGrowthRate(Number(e.target.value))}
                       className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-slate-600"
                    />
+                   <DecimalInput 
+                      value={growthRate}
+                      onChange={setGrowthRate}
+                      className="w-full p-2 border border-slate-200 rounded font-bold text-slate-800 focus:ring-2 focus:ring-orange-500 outline-none"
+                      rightSymbol="%"
+                   />
                 </div>
                 <div className="space-y-2">
                    <div className="flex justify-between text-xs font-bold text-slate-700">
@@ -159,6 +165,12 @@ export const FireCalculator: React.FC<FireCalculatorProps> = ({ currency }) => {
                       value={withdrawalRate}
                       onChange={(e) => setWithdrawalRate(Number(e.target.value))}
                       className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-slate-600"
+                   />
+                   <DecimalInput 
+                      value={withdrawalRate}
+                      onChange={setWithdrawalRate}
+                      className="w-full p-2 border border-slate-200 rounded font-bold text-slate-800 focus:ring-2 focus:ring-orange-500 outline-none"
+                      rightSymbol="%"
                    />
                 </div>
              </div>

@@ -48,6 +48,7 @@ export const INITIAL_INPUTS: UserInput = {
   lifeExpectancy: 90,
   currentPortfolio: 50000,
   currentRothBalance: 0,
+  currentBrokerageBalance: 0,
   
   monthlyContribution: 1000,
   monthlyRothContribution: 0,

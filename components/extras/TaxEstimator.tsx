@@ -1,9 +1,9 @@
-
 import React, { useState, useMemo } from 'react';
 import { CURRENCIES } from '../../lib/constants';
 import { CurrencyCode } from '../../lib/types';
 import { calculateUSFederalTax, STANDARD_DEDUCTION_2025 } from '../../lib/taxMath';
 import { CurrencyInput } from '../ui/CurrencyInput';
+import { DecimalInput } from '../ui/DecimalInput';
 import { Percent, Briefcase, FileCheck, Calculator, Info, CheckCircle2, AlertTriangle, Landmark, Users, TrendingUp, Plus, Minus } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
 
@@ -35,7 +35,7 @@ export const TaxEstimator: React.FC<TaxEstimatorProps> = ({ currency }) => {
 
   const currencyConfig = CURRENCIES[currency];
   const formatCurrency = (val: number) => new Intl.NumberFormat(currencyConfig.locale, { style: 'currency', currency: currency, maximumFractionDigits: 0 }).format(val);
-
+  
   // --- Calculation Logic ---
   
   // 1. Normalize Pre-tax to Dollars
@@ -191,14 +191,12 @@ export const TaxEstimator: React.FC<TaxEstimatorProps> = ({ currency }) => {
                   />
                 ) : (
                   <div className="relative">
-                     <input 
-                       type="number" 
-                       min="0" max="100"
+                     <DecimalInput 
                        value={preTaxPercent}
-                       onChange={(e) => setPreTaxPercent(Number(e.target.value))}
+                       onChange={setPreTaxPercent}
                        className="w-full p-3 border border-slate-200 rounded-lg font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 focus:bg-white transition-colors"
+                       rightSymbol="%"
                      />
-                     <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">%</span>
                      <div className="absolute right-10 top-1/2 -translate-y-1/2 text-xs text-slate-400 mr-2">
                         {formatCurrency(preTaxDollarAmount)}
                      </div>

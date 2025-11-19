@@ -1,8 +1,8 @@
-
 import React, { useState, useMemo } from 'react';
 import { CURRENCIES } from '../../lib/constants';
 import { CurrencyCode } from '../../lib/types';
 import { CurrencyInput } from '../ui/CurrencyInput';
+import { DecimalInput } from '../ui/DecimalInput';
 import { GraduationCap, TrendingUp, BookOpen, PiggyBank, AlertTriangle, CheckCircle } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, ReferenceLine, Legend } from 'recharts';
 
@@ -58,8 +58,6 @@ export const EducationCalculator: React.FC<EducationCalculatorProps> = ({ curren
        balance = balance * (1 + investmentReturn/100);
        
        // 2. Contributions (only before/during college, though usually people stop during? let's assume continue)
-       // Let's assume contributions stop when college starts or user continues?
-       // Standard planner: Contributions continue until end of college or specific stop. 
        // Let's assume they contribute until the end of college for simplicity, or just util start.
        // Let's say contributions stop at graduation (endAge).
        if (age < endAge) {
@@ -69,15 +67,10 @@ export const EducationCalculator: React.FC<EducationCalculatorProps> = ({ curren
        }
 
        // 3. Tuitions Paid (Drawdown)
-       // We pay tuition at beginning of year usually, but simplified to end of year logic or mid-year
-       // Let's subtract cost from balance.
        if (isCollegeYears) {
           balance -= yearlyCost; 
        }
     }
-
-    // Total Cost in Future Dollars
-    const futureTotalCost = annualCollegeCost * Math.pow(1 + educationInflation/100, yearsUntilCollege) * 4; // Approx
 
     return { data, finalBalance: balance, yearsUntilCollege };
   }, [childAge, collegeStartAge, currentSavings, monthlyContribution, annualCollegeCost, educationInflation, investmentReturn]);
@@ -170,20 +163,20 @@ export const EducationCalculator: React.FC<EducationCalculatorProps> = ({ curren
                  <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
                        <label className="text-xs font-bold text-slate-700">Tuition Inflation (%)</label>
-                       <input 
-                          type="number" step="0.1"
+                       <DecimalInput 
                           value={educationInflation}
-                          onChange={(e) => setEducationInflation(Number(e.target.value))}
+                          onChange={setEducationInflation}
                           className="w-full p-2 border border-slate-200 rounded font-bold text-slate-800 focus:ring-2 focus:ring-cyan-500 outline-none"
+                          rightSymbol="%"
                        />
                     </div>
                     <div className="space-y-1">
                        <label className="text-xs font-bold text-slate-700">Inv. Return (%)</label>
-                       <input 
-                          type="number" step="0.1"
+                       <DecimalInput 
                           value={investmentReturn}
-                          onChange={(e) => setInvestmentReturn(Number(e.target.value))}
+                          onChange={setInvestmentReturn}
                           className="w-full p-2 border border-slate-200 rounded font-bold text-slate-800 focus:ring-2 focus:ring-cyan-500 outline-none"
+                          rightSymbol="%"
                        />
                     </div>
                  </div>

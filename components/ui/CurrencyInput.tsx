@@ -1,24 +1,32 @@
+import React, { useState, useEffect } from 'react';
 
-import React from 'react';
-
-interface CurrencyInputProps { 
-  value: number; 
-  onChange: (val: number) => void; 
+interface CurrencyInputProps {
+  value: number;
+  onChange: (val: number) => void;
   className?: string;
-  symbol?: string;
+  symbol?: React.ReactNode;
   placeholder?: string;
 }
 
-export const CurrencyInput: React.FC<CurrencyInputProps> = ({ 
-  value, 
-  onChange, 
+export const CurrencyInput: React.FC<CurrencyInputProps> = ({
+  value,
+  onChange,
   className,
   symbol,
   placeholder = "0"
 }) => {
+  const [isFocused, setIsFocused] = useState(false);
+  const [localValue, setLocalValue] = useState(value.toString());
+
+  useEffect(() => {
+    if (!isFocused) {
+        setLocalValue(value === 0 ? '' : value.toLocaleString('en-US'));
+    }
+  }, [value, isFocused]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Remove non-digits (keeping it integer-only for simplicity in this context)
     const raw = e.target.value.replace(/[^0-9]/g, '');
+    setLocalValue(raw);
     if (!raw) {
       onChange(0);
     } else {
@@ -26,14 +34,25 @@ export const CurrencyInput: React.FC<CurrencyInputProps> = ({
     }
   };
 
+  const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+      setIsFocused(true);
+      setLocalValue(value === 0 ? '' : value.toString());
+      e.target.select();
+  };
+
+  const handleBlur = () => {
+      setIsFocused(false);
+  };
+
   return (
     <div className="relative w-full">
       <input
         type="text"
         inputMode="numeric"
-        // Display empty if 0 to allow cleaner typing from scratch, unless it's acting as a controlled placeholder
-        value={value === 0 ? '' : value.toLocaleString('en-US')} 
+        value={localValue}
         onChange={handleChange}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
         placeholder={placeholder}
         className={className}
       />
