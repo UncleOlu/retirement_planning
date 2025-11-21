@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { UserInput, InvestmentStrategyType, CurrencyCode } from '../lib/types';
 import { INVESTMENT_STRATEGIES, CURRENCIES } from '../lib/constants';
@@ -231,26 +232,26 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
         </div>
         
         {/* Age Inputs */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1">
-            <label className="text-sm font-medium text-slate-700">Current Age</label>
+            <label className="text-xs font-bold text-slate-700">Current Age</label>
             <input 
               type="number" 
               value={inputs.currentAge}
               onChange={(e) => handleChange('currentAge', e.target.value)}
               onFocus={handleFocus}
-              className={`w-full p-2 rounded border outline-none transition bg-white text-slate-900 ${errors.currentAge ? 'border-red-400 bg-red-50' : 'border-slate-200 focus:ring-2 focus:ring-emerald-500'}`}
+              className={`w-full p-2 rounded-lg border outline-none transition bg-white text-slate-900 font-semibold ${errors.currentAge ? 'border-red-400 bg-red-50' : 'border-slate-200 focus:ring-2 focus:ring-emerald-500'}`}
             />
             {errors.currentAge && <div className="text-[10px] text-red-500 flex items-center gap-1"><AlertCircle size={10}/> {errors.currentAge}</div>}
           </div>
           <div className="space-y-1">
-            <label className="text-sm font-medium text-slate-700">Retirement Age</label>
+            <label className="text-xs font-bold text-slate-700">Retirement Age</label>
             <input 
               type="number" 
               value={inputs.retirementAge}
               onChange={(e) => handleChange('retirementAge', e.target.value)}
               onFocus={handleFocus}
-              className={`w-full p-2 rounded border outline-none transition bg-white text-slate-900 ${errors.retirementAge ? 'border-red-400 bg-red-50' : 'border-slate-200 focus:ring-2 focus:ring-emerald-500'}`}
+              className={`w-full p-2 rounded-lg border outline-none transition bg-white text-slate-900 font-semibold ${errors.retirementAge ? 'border-red-400 bg-red-50' : 'border-slate-200 focus:ring-2 focus:ring-emerald-500'}`}
             />
              {errors.retirementAge && <div className="text-[10px] text-red-500 flex items-center gap-1"><AlertCircle size={10}/> {errors.retirementAge}</div>}
           </div>
@@ -259,7 +260,7 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
         {/* Current Portfolio with Split */}
         <div className="space-y-1">
           <div className="flex justify-between items-end">
-            <label className="text-sm font-medium text-slate-700">Current Portfolio</label>
+            <label className="text-xs font-bold text-slate-700">Current Portfolio</label>
             {!showPortfolioSplit && (
                <button 
                  onClick={() => setShowPortfolioSplit(true)}
@@ -276,7 +277,7 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
             <CurrencyInput 
                value={inputs.currentPortfolio}
                onChange={(val) => handleChange('currentPortfolio', val)}
-               className="w-full pl-9 p-2 rounded border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none font-semibold text-slate-700 bg-white"
+               className="w-full pl-9 p-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none font-bold text-slate-700 bg-white"
                placeholder="Total Savings"
                symbol={<CurrencyIcon size={16} />}
             />
@@ -287,7 +288,7 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
                <div className="mt-4 pt-3 border-t border-slate-100 animate-fade-in space-y-3">
                  <div className="flex justify-between items-center mb-1">
                     <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
-                       Breakdown by Tax Status
+                       Breakdown
                     </label>
                     <button 
                       onClick={() => setShowPortfolioSplit(false)} 
@@ -370,7 +371,7 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
         {/* Monthly Contribution Breakdown */}
         <div className="space-y-3">
           <div className="flex justify-between items-end">
-             <label className="text-sm font-medium text-slate-700">Monthly Contribution</label>
+             <label className="text-xs font-bold text-slate-700">Monthly Contribution</label>
              <div className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded border border-indigo-100">
                Total: {currencySymbol}{inputs.monthlyContribution.toLocaleString()}
              </div>
@@ -384,13 +385,13 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
                  <Briefcase size={14} className="text-slate-400" />
                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Employer Plans</span>
                </div>
-               <div className="grid grid-cols-2 gap-3">
+               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                  <div>
                     <label className="block text-[10px] text-slate-500 mb-1">Traditional 401k/403b</label>
                     <CurrencyInput 
                        value={inputs.savingsTrad401k || 0}
                        onChange={(val) => handleContributionBreakdownChange('savingsTrad401k', val)}
-                       className="w-full pl-6 p-1.5 text-sm border border-slate-200 rounded focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50"
+                       className="w-full pl-6 p-1.5 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50"
                        placeholder="0"
                        symbol={<span className="text-slate-400 text-xs"><CurrencyIcon size={12}/></span>}
                     />
@@ -401,7 +402,7 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
                     <CurrencyInput 
                        value={inputs.savingsRoth401k || 0}
                        onChange={(val) => handleContributionBreakdownChange('savingsRoth401k', val)}
-                       className="w-full pl-6 p-1.5 text-sm border border-emerald-100 rounded focus:ring-2 focus:ring-emerald-500 outline-none bg-emerald-50 text-emerald-800 font-medium"
+                       className="w-full pl-6 p-1.5 text-sm border border-emerald-100 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none bg-emerald-50 text-emerald-800 font-medium"
                        placeholder="0"
                        symbol={<span className="text-emerald-300 text-xs"><CurrencyIcon size={12}/></span>}
                     />
@@ -418,13 +419,13 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
                  <PiggyBank size={14} className="text-slate-400" />
                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Individual Accounts</span>
                </div>
-               <div className="grid grid-cols-2 gap-3">
+               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                  <div>
                     <label className="block text-[10px] text-emerald-600 mb-1">Roth IRA / Backdoor</label>
                     <CurrencyInput 
                        value={inputs.savingsRothIRA || 0}
                        onChange={(val) => handleContributionBreakdownChange('savingsRothIRA', val)}
-                       className="w-full pl-6 p-1.5 text-sm border border-emerald-100 rounded focus:ring-2 focus:ring-emerald-500 outline-none bg-emerald-50 text-emerald-800 font-medium"
+                       className="w-full pl-6 p-1.5 text-sm border border-emerald-100 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none bg-emerald-50 text-emerald-800 font-medium"
                        placeholder="0"
                        symbol={<span className="text-emerald-300 text-xs"><CurrencyIcon size={12}/></span>}
                     />
@@ -434,7 +435,7 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
                     <CurrencyInput 
                        value={inputs.savingsBrokerage || 0}
                        onChange={(val) => handleContributionBreakdownChange('savingsBrokerage', val)}
-                       className="w-full pl-6 p-1.5 text-sm border border-slate-200 rounded focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50"
+                       className="w-full pl-6 p-1.5 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50"
                        placeholder="0"
                        symbol={<span className="text-slate-400 text-xs"><CurrencyIcon size={12}/></span>}
                     />
@@ -478,23 +479,23 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
         </div>
 
         <div className="space-y-1">
-          <label className="text-sm font-medium text-slate-700 flex items-center justify-between">
+          <label className="text-xs font-bold text-slate-700 flex items-center justify-between">
             {inputs.targetType === 'income' ? 'Desired Annual Income' : 'Target Portfolio Value'}
-            <span className="text-xs font-normal text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+            <span className="text-[10px] font-normal text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
                {inputs.targetType === 'income' ? "In Today's Dollars (Real)" : "In Future Dollars (Nominal)"}
             </span>
           </label>
           <CurrencyInput 
              value={inputs.targetValue}
              onChange={(val) => handleChange('targetValue', val)}
-             className="w-full pl-9 p-2 rounded border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none font-medium text-slate-900 bg-white"
+             className="w-full pl-9 p-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none font-medium text-slate-900 bg-white"
              symbol={<span className="text-slate-400"><CurrencyIcon size={16} /></span>}
           />
         </div>
 
         {/* Social Security Input */}
          <div className="space-y-1">
-          <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
+          <label className="text-xs font-bold text-slate-700 flex items-center gap-2">
             Social Security / National Pension
             <Tooltip text="Estimated monthly government benefit in today's dollars. This reduces the amount you need to withdraw from your portfolio." />
           </label>
@@ -502,20 +503,20 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
              value={inputs.estimatedSocialSecurity}
              onChange={(val) => handleChange('estimatedSocialSecurity', val)}
              placeholder="e.g. 2000"
-             className="w-full pl-9 p-2 rounded border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none bg-white text-slate-900"
+             className="w-full pl-9 p-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none bg-white text-slate-900"
              symbol={<span className="text-slate-400"><CurrencyIcon size={16} /></span>}
           />
         </div>
 
         <div className="space-y-1">
-           <label className="text-sm font-medium text-slate-700 flex items-center">
+           <label className="text-xs font-bold text-slate-700 flex items-center">
             Safe Withdrawal Rate
             <Tooltip text="The percentage of your portfolio you withdraw each year. 4% is the standard 'safe' rule." />
           </label>
            <DecimalInput 
              value={inputs.safeWithdrawalRate}
              onChange={(val) => handleChange('safeWithdrawalRate', val)}
-             className="w-full p-2 pr-8 rounded border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none bg-white text-slate-900"
+             className="w-full p-2 pr-8 rounded-lg border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none bg-white text-slate-900"
              rightSymbol="%"
            />
         </div>
@@ -528,7 +529,7 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
         </h3>
 
         <div className="space-y-2">
-          <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
+          <label className="text-xs font-bold text-slate-700 flex items-center gap-2">
             Investment Strategy
             <Tooltip text="Choose a growth rate based on historical market performance for different portfolio mixes." />
           </label>
@@ -601,7 +602,7 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
               <DecimalInput 
                 value={inputs.customReturnRate}
                 onChange={(val) => handleChange('customReturnRate', val)}
-                className="w-full p-2 rounded border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none pr-8 bg-white text-slate-900"
+                className="w-full p-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none pr-8 bg-white text-slate-900"
                 rightSymbol="%"
               />
              </div>
@@ -611,7 +612,7 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
         {/* Inflation */}
         <div className="space-y-3">
           <div className="flex justify-between items-center">
-            <label className="text-sm font-medium text-slate-700 flex items-center">
+            <label className="text-xs font-bold text-slate-700 flex items-center">
               Inflation Rate
               <Tooltip text="The rate at which prices rise. Historic average is around 3%." />
             </label>
@@ -637,14 +638,14 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
 
         {/* Tax Rate */}
         <div className="space-y-1 pt-2">
-           <label className="text-sm font-medium text-slate-700 flex items-center">
+           <label className="text-xs font-bold text-slate-700 flex items-center">
               Est. Retirement Tax Rate (%)
               <Tooltip text="Average tax rate on withdrawals from Traditional/Taxable accounts. Roth is tax-free." />
            </label>
            <DecimalInput 
               value={inputs.retirementTaxRate}
               onChange={(val) => handleChange('retirementTaxRate', val)}
-              className="w-full p-2 pr-8 rounded border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none bg-white text-slate-900"
+              className="w-full p-2 pr-8 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none bg-white text-slate-900"
               rightSymbol="%"
            />
         </div>

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 
 interface CurrencyInputProps {
@@ -78,7 +79,7 @@ export const CurrencyInput: React.FC<CurrencyInputProps> = ({
         className={className}
       />
       {symbol && (
-         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold pointer-events-none">
+         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold pointer-events-none flex items-center justify-center">
             {symbol}
          </span>
       )}
