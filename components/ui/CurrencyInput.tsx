@@ -79,7 +79,7 @@ export const CurrencyInput: React.FC<CurrencyInputProps> = ({
         className={className}
       />
       {symbol && (
-         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold pointer-events-none flex items-center justify-center">
+         <span className="absolute left-3 top-0 bottom-0 flex items-center justify-center text-slate-400 text-xs font-bold pointer-events-none">
             {symbol}
          </span>
       )}

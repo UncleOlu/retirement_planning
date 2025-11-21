@@ -214,7 +214,7 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
     <div className="space-y-8 pb-12">
       
       {/* Section 1: Profile & Contributions */}
-      <section className="space-y-4">
+      <section className="space-y-6">
         <div className="flex justify-between items-center">
           <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500">
             Profile & Contributions
@@ -285,7 +285,7 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
             
             {/* Split Details (Conditional) */}
             {showPortfolioSplit && (
-               <div className="mt-4 pt-3 border-t border-slate-100 animate-fade-in space-y-3">
+               <div className="mt-4 pt-3 border-t border-slate-100 animate-fade-in space-y-4">
                  <div className="flex justify-between items-center mb-1">
                     <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
                        Breakdown
@@ -377,21 +377,21 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
              </div>
           </div>
           
-          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-4">
+          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-6">
              
              {/* Work Retirement */}
              <div>
-               <div className="flex items-center gap-2 mb-2">
+               <div className="flex items-center gap-2 mb-3">
                  <Briefcase size={14} className="text-slate-400" />
                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Employer Plans</span>
                </div>
-               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                  <div>
                     <label className="block text-[10px] text-slate-500 mb-1">Traditional 401k/403b</label>
                     <CurrencyInput 
                        value={inputs.savingsTrad401k || 0}
                        onChange={(val) => handleContributionBreakdownChange('savingsTrad401k', val)}
-                       className="w-full pl-6 p-1.5 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50"
+                       className="w-full pl-6 p-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50"
                        placeholder="0"
                        symbol={<span className="text-slate-400 text-xs"><CurrencyIcon size={12}/></span>}
                     />
@@ -402,7 +402,7 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
                     <CurrencyInput 
                        value={inputs.savingsRoth401k || 0}
                        onChange={(val) => handleContributionBreakdownChange('savingsRoth401k', val)}
-                       className="w-full pl-6 p-1.5 text-sm border border-emerald-100 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none bg-emerald-50 text-emerald-800 font-medium"
+                       className="w-full pl-6 p-2 text-sm border border-emerald-100 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none bg-emerald-50 text-emerald-800 font-medium"
                        placeholder="0"
                        symbol={<span className="text-emerald-300 text-xs"><CurrencyIcon size={12}/></span>}
                     />
@@ -415,17 +415,17 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
 
              {/* Personal Retirement */}
              <div>
-               <div className="flex items-center gap-2 mb-2">
+               <div className="flex items-center gap-2 mb-3">
                  <PiggyBank size={14} className="text-slate-400" />
                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Individual Accounts</span>
                </div>
-               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                  <div>
                     <label className="block text-[10px] text-emerald-600 mb-1">Roth IRA / Backdoor</label>
                     <CurrencyInput 
                        value={inputs.savingsRothIRA || 0}
                        onChange={(val) => handleContributionBreakdownChange('savingsRothIRA', val)}
-                       className="w-full pl-6 p-1.5 text-sm border border-emerald-100 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none bg-emerald-50 text-emerald-800 font-medium"
+                       className="w-full pl-6 p-2 text-sm border border-emerald-100 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none bg-emerald-50 text-emerald-800 font-medium"
                        placeholder="0"
                        symbol={<span className="text-emerald-300 text-xs"><CurrencyIcon size={12}/></span>}
                     />
@@ -435,7 +435,7 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
                     <CurrencyInput 
                        value={inputs.savingsBrokerage || 0}
                        onChange={(val) => handleContributionBreakdownChange('savingsBrokerage', val)}
-                       className="w-full pl-6 p-1.5 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50"
+                       className="w-full pl-6 p-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50"
                        placeholder="0"
                        symbol={<span className="text-slate-400 text-xs"><CurrencyIcon size={12}/></span>}
                     />
@@ -448,7 +448,7 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
       </section>
 
       {/* Financial Wisdom Tip */}
-      <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-3 flex gap-3 transition-all hover:shadow-sm">
+      <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-4 flex gap-3 transition-all hover:shadow-sm">
         <Lightbulb className="text-emerald-500 shrink-0 mt-0.5" size={18} />
         <div>
           <h4 className="text-xs font-bold text-emerald-700 uppercase mb-1">{tip.title}</h4>
@@ -457,7 +457,7 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
       </div>
 
       {/* Section 2: Goals */}
-      <section className="space-y-4 pt-4 border-t border-slate-100">
+      <section className="space-y-6 pt-4 border-t border-slate-100">
         <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500 flex items-center">
           Retirement Goal
           <Tooltip text="Define what success looks like. Either a specific annual income or a total nest egg." />
@@ -523,7 +523,7 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
       </section>
 
       {/* Section 3: Assumptions & Tax Rate */}
-      <section className="space-y-4 pt-4 border-t border-slate-100">
+      <section className="space-y-6 pt-4 border-t border-slate-100">
         <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500 flex items-center">
           Strategy & Assumptions
         </h3>
