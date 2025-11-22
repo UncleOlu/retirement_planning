@@ -1,8 +1,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { ShieldCheck, Lock, MapPin } from 'lucide-react';
+import { CountryCode } from '../lib/types';
 
-export const ComplianceBanner: React.FC = () => {
+interface ComplianceBannerProps {
+  country?: CountryCode;
+}
+
+export const ComplianceBanner: React.FC<ComplianceBannerProps> = ({ country = 'US' }) => {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
@@ -25,10 +30,12 @@ export const ComplianceBanner: React.FC = () => {
         <div className="flex-1 space-y-2">
           <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2">
             <ShieldCheck size={18} className="text-emerald-600" /> 
-            US State Law & Privacy Compliance
+            Privacy & Data Protection
           </h4>
           <p className="text-xs text-slate-500 leading-relaxed max-w-3xl">
-            This application operates in strict compliance with United States consumer privacy laws, including the <strong>California Consumer Privacy Act (CCPA)</strong>, <strong>CPRA</strong>, and applicable state regulations. 
+            This application operates in strict compliance with consumer privacy laws, including the 
+            {country === 'US' ? <strong> California Consumer Privacy Act (CCPA)</strong> : <strong> UK GDPR / Data Protection Act</strong>}. 
+            All data is processed locally on your device.
           </p>
           <div className="flex flex-wrap gap-3 mt-1">
             <div className="flex items-center gap-1 text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-1 rounded border border-slate-100">
@@ -42,7 +49,7 @@ export const ComplianceBanner: React.FC = () => {
         
         <div className="flex flex-col sm:flex-row items-center gap-3 shrink-0 w-full md:w-auto">
            <button className="text-xs font-bold text-slate-400 hover:text-slate-600 transition whitespace-nowrap">
-             Do Not Sell My Info
+             Privacy Settings
            </button>
            <button 
              onClick={handleAccept}

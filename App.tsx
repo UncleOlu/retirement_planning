@@ -1,12 +1,12 @@
 
 import React, { useState, useEffect, useMemo, Suspense, useRef } from 'react';
-import { INITIAL_INPUTS } from './lib/constants';
-import { UserInput, Scenario } from './lib/types';
+import { INITIAL_INPUTS, COUNTRY_CONFIG } from './lib/constants';
+import { UserInput, Scenario, CountryCode } from './lib/types';
 import { runSimulation } from './lib/financeMath';
 import { InputPanel } from './components/InputPanel';
 import { ResultsSummary } from './components/ResultsSummary';
 import { ViewToggle } from './components/ViewToggle';
-import { LayoutDashboard, Sliders, PieChart, Menu, Trash2, Plus, Loader2, Layers, User, ArrowDown, ChevronDown, X, Save, Calculator, ArrowRight } from 'lucide-react';
+import { LayoutDashboard, Sliders, PieChart, Menu, Trash2, Plus, Loader2, Layers, User, ArrowDown, ChevronDown, X, Save, Calculator, ArrowRight, Globe } from 'lucide-react';
 import { ComplianceBanner } from './components/ComplianceBanner';
 import { LegalFooter } from './components/LegalFooter';
 
@@ -19,9 +19,26 @@ const ScenarioComparison = React.lazy(() => import('./components/ScenarioCompari
 const ExtrasDashboard = React.lazy(() => import('./components/extras/ExtrasDashboard').then(module => ({ default: module.ExtrasDashboard })));
 
 const App: React.FC = () => {
+  // Country State
+  const [country, setCountry] = useState<CountryCode>('US');
+
   // Single source of truth for inputs
   const [inputs, setInputs] = useState<UserInput>(INITIAL_INPUTS);
   
+  // Update default inputs when country changes (currency & some base values)
+  const handleCountryChange = (newCountry: CountryCode) => {
+    setCountry(newCountry);
+    const config = COUNTRY_CONFIG[newCountry];
+    setInputs(prev => ({
+      ...prev,
+      currency: config.currency,
+      // Adjust generic defaults slightly for UK GBP scale if needed, 
+      // though mostly purely currency symbol change is enough for rough calc
+      estimatedSocialSecurity: newCountry === 'UK' ? 900 : 2000, // Approx Full State Pension vs Avg SS
+      targetValue: newCountry === 'UK' ? 40000 : 60000 // Lower numerical nominal for UK salaries
+    }));
+  };
+
   // Debounce inputs for simulation to save CPU cycles on client
   const [debouncedInputs, setDebouncedInputs] = useState<UserInput>(INITIAL_INPUTS);
 
@@ -111,6 +128,10 @@ const App: React.FC = () => {
     // Merge saved inputs with INITIAL_INPUTS to ensure new fields exist
     setInputs({ ...INITIAL_INPUTS, ...scenario.inputs });
     
+    // Attempt to detect country from currency if needed, but default logic holds
+    if (scenario.inputs.currency === 'GBP') setCountry('UK');
+    else if (scenario.inputs.currency === 'USD') setCountry('US');
+
     if (activeTab === 'compare') {
       setActiveTab(window.innerWidth < 768 ? 'inputs' : 'dashboard');
     }
@@ -165,7 +186,7 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-slate-50">
-      <ComplianceBanner />
+      <ComplianceBanner country={country} />
       
       {/* Mobile Header */}
       <div className="md:hidden bg-white p-4 border-b flex justify-between items-center sticky top-0 z-20 shadow-sm">
@@ -178,7 +199,7 @@ const App: React.FC = () => {
         </button>
       </div>
 
-      {/* Mobile Menu Overlay - Scenarios & Save */}
+      {/* Mobile Menu Overlay */}
       {mobileMenuOpen && (
          <div className="fixed inset-0 z-50 bg-white p-4 md:hidden overflow-y-auto animate-fade-in">
             <div className="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
@@ -189,6 +210,25 @@ const App: React.FC = () => {
                </button>
             </div>
             
+            {/* Country Selector Mobile */}
+            <div className="mb-6 bg-slate-50 p-3 rounded-lg border border-slate-100">
+              <h3 className="text-xs font-bold uppercase text-slate-400 mb-2 flex items-center gap-1"><Globe size={12} /> Region</h3>
+              <div className="flex gap-2">
+                 <button 
+                   onClick={() => handleCountryChange('US')}
+                   className={`flex-1 py-2 text-sm font-bold rounded transition ${country === 'US' ? 'bg-white shadow text-indigo-600' : 'text-slate-400'}`}
+                 >
+                   🇺🇸 USA
+                 </button>
+                 <button 
+                   onClick={() => handleCountryChange('UK')}
+                   className={`flex-1 py-2 text-sm font-bold rounded transition ${country === 'UK' ? 'bg-white shadow text-indigo-600' : 'text-slate-400'}`}
+                 >
+                   🇬🇧 UK
+                 </button>
+              </div>
+            </div>
+
             {/* 1. Save Current Scenario Mobile UI */}
             <div className="mb-8 bg-emerald-50 rounded-xl p-4 border border-emerald-100 shadow-sm">
               <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-800 mb-3 flex items-center gap-2">
@@ -275,12 +315,30 @@ const App: React.FC = () => {
       {/* Left Sidebar (Inputs) - Only show on Desktop */}
       <aside className="hidden md:flex w-[400px] h-screen sticky top-0 p-0 bg-white border-r border-slate-200 z-10 flex-col shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
         <div className="p-6 border-b border-slate-100">
-            <div className="flex items-center gap-2">
-            <div className="p-2 bg-emerald-600 rounded-lg text-white shadow-lg shadow-emerald-600/20">
-              <LayoutDashboard size={20} />
+            <div className="flex items-center justify-between mb-4">
+               <div className="flex items-center gap-2">
+                  <div className="p-2 bg-emerald-600 rounded-lg text-white shadow-lg shadow-emerald-600/20">
+                    <LayoutDashboard size={20} />
+                  </div>
+                  <h1 className="font-bold text-xl text-slate-900 tracking-tight">Retirement</h1>
+               </div>
+               
+               {/* Country Switcher Desktop */}
+               <div className="flex bg-slate-100 rounded-lg p-1">
+                 <button 
+                   onClick={() => handleCountryChange('US')}
+                   className={`px-2 py-1 rounded text-xs font-bold transition flex items-center gap-1 ${country === 'US' ? 'bg-white shadow text-indigo-700' : 'text-slate-400 hover:text-slate-600'}`}
+                 >
+                   🇺🇸 US
+                 </button>
+                 <button 
+                   onClick={() => handleCountryChange('UK')}
+                   className={`px-2 py-1 rounded text-xs font-bold transition flex items-center gap-1 ${country === 'UK' ? 'bg-white shadow text-indigo-700' : 'text-slate-400 hover:text-slate-600'}`}
+                 >
+                   🇬🇧 UK
+                 </button>
+               </div>
             </div>
-            <h1 className="font-bold text-xl text-slate-900 tracking-tight">Retirement Planning</h1>
-          </div>
         </div>
         
         <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-8">
@@ -337,6 +395,7 @@ const App: React.FC = () => {
           <InputPanel 
             inputs={inputs} 
             onChange={setInputs} 
+            country={country}
           />
         </div>
       </aside>
@@ -434,7 +493,7 @@ const App: React.FC = () => {
                            Profile & Data
                          </h2>
                       </div>
-                      <InputPanel inputs={inputs} onChange={setInputs} />
+                      <InputPanel inputs={inputs} onChange={setInputs} country={country} />
                    </div>
 
                    {/* Visual Connector to encourage scrolling */}
@@ -466,7 +525,7 @@ const App: React.FC = () => {
                     
                     {/* Reality Check - Takes up 1 column */}
                     <div className="xl:col-span-1">
-                      <RealityCheck inputs={debouncedInputs} result={result} />
+                      <RealityCheck inputs={debouncedInputs} result={result} country={country} />
                     </div>
                   </div>
 
@@ -500,7 +559,7 @@ const App: React.FC = () => {
                           <span className="font-mono font-medium text-slate-900">{inputs.retirementTaxRate}%</span>
                         </li>
                          <li className="flex justify-between pb-2 border-b border-slate-50">
-                          <span className="text-slate-600">Social Security / National Pension</span>
+                          <span className="text-slate-600">{COUNTRY_CONFIG[country].labels.socialSecurity}</span>
                           <span className="font-mono font-medium text-slate-900">
                               {new Intl.NumberFormat('en-US', { style: 'currency', currency: inputs.currency, maximumFractionDigits: 0 }).format(inputs.estimatedSocialSecurity)}/mo
                           </span>
@@ -513,7 +572,7 @@ const App: React.FC = () => {
             ) : activeTab === 'compare' ? (
                <ScenarioComparison scenarios={scenarios} />
             ) : activeTab === 'extras' ? (
-               <ExtrasDashboard currency={inputs.currency} />
+               <ExtrasDashboard currency={inputs.currency} country={country} />
             ) : (
               <GoalSandbox inputs={inputs} />
             )}
@@ -521,7 +580,7 @@ const App: React.FC = () => {
           </div>
 
           {/* Legal Footer Component */}
-          <LegalFooter />
+          <LegalFooter country={country} />
         </div>
       </main>
     </div>

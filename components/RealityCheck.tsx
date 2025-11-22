@@ -1,16 +1,18 @@
 
 import React, { useState, useEffect } from 'react';
-import { HISTORICAL_BENCHMARKS } from '../lib/constants';
-import { UserInput, InvestmentStrategyType, SimulationResult, HistoricalBenchmark } from '../lib/types';
+import { BENCHMARKS_BY_COUNTRY } from '../lib/constants';
+import { UserInput, InvestmentStrategyType, SimulationResult, HistoricalBenchmark, CountryCode } from '../lib/types';
 import { History, AlertTriangle, TrendingUp, AlertOctagon, Hourglass, ChevronDown } from 'lucide-react';
 
 interface RealityCheckProps {
   inputs: UserInput;
   result: SimulationResult;
+  country?: CountryCode;
 }
 
-export const RealityCheck: React.FC<RealityCheckProps> = ({ inputs, result }) => {
+export const RealityCheck: React.FC<RealityCheckProps> = ({ inputs, result, country = 'US' }) => {
   const timeHorizon = inputs.retirementAge - inputs.currentAge;
+  const benchmarks = BENCHMARKS_BY_COUNTRY[country] || BENCHMARKS_BY_COUNTRY.US;
   
   // Dynamic Window Selection
   const [selectedPeriod, setSelectedPeriod] = useState<number>(10);
@@ -33,10 +35,13 @@ export const RealityCheck: React.FC<RealityCheckProps> = ({ inputs, result }) =>
   // Get dynamic data key
   const dataKey = `cagr${selectedPeriod}` as keyof HistoricalBenchmark;
 
-  // Check if user is overly optimistic ( > 2% over S&P 500 history)
-  const sp500 = HISTORICAL_BENCHMARKS.find(b => b.ticker === 'SPY');
+  // Check if user is overly optimistic ( > 2% over S&P 500 equivalent history)
+  // For UK, we use VUSA or All-World as the high growth benchmark to compare against
+  const mainBenchmarkTicker = country === 'UK' ? 'VWRL' : 'SPY';
+  const mainBenchmark = benchmarks.find(b => b.ticker === mainBenchmarkTicker) || benchmarks[0];
+  
   // We cast to number to ensure TS knows it's a number (it is defined in interface)
-  const benchmarkVal = sp500 ? (sp500[dataKey] as number) : 10;
+  const benchmarkVal = mainBenchmark ? (mainBenchmark[dataKey] as number) : 10;
   const isOptimistic = userRate > (benchmarkVal + 1.5);
   
   // Solvency Check
@@ -96,14 +101,14 @@ export const RealityCheck: React.FC<RealityCheckProps> = ({ inputs, result }) =>
         
         {/* Section 2: Growth Comparison */}
         <p className="text-sm text-slate-500 mb-4 leading-relaxed">
-          You're assuming a <strong>{userRate}%</strong> return. Here is how broad market funds performed over the <strong>Last {selectedPeriod} Years</strong>.
+          You're assuming a <strong>{userRate}%</strong> return. Here is how broad {country === 'UK' ? 'UK & Global' : 'market'} funds performed over the <strong>Last {selectedPeriod} Years</strong>.
         </p>
 
         {isOptimistic && (
            <div className="mb-6 bg-amber-50 text-amber-800 p-3 rounded-lg text-xs flex items-start gap-2 border border-amber-100">
              <AlertTriangle className="shrink-0 mt-0.5" size={14} />
              <div>
-               <strong>Optimistic Assumption.</strong> Your rate is higher than the S&P 500 average ({benchmarkVal}%).
+               <strong>Optimistic Assumption.</strong> Your rate is higher than the {mainBenchmark.ticker} average ({benchmarkVal}%).
              </div>
            </div>
         )}
@@ -138,7 +143,7 @@ export const RealityCheck: React.FC<RealityCheckProps> = ({ inputs, result }) =>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {HISTORICAL_BENCHMARKS.map((bench) => (
+              {benchmarks.map((bench) => (
                 <tr key={bench.ticker} className="hover:bg-slate-50/50">
                   <td className="px-3 py-2">
                     <div className="font-bold text-slate-700">{bench.ticker}</div>
@@ -163,7 +168,7 @@ export const RealityCheck: React.FC<RealityCheckProps> = ({ inputs, result }) =>
         </div>
 
         <div className="mt-4 text-[10px] text-slate-400 italic text-center">
-           *Past performance is not indicative of future results. Data represents nominal annualized returns (CAGR).
+           *Past performance is not indicative of future results. Data represents nominal annualized returns (CAGR) in {country === 'UK' ? 'GBP' : 'USD'}.
         </div>
       </div>
     </div>

@@ -1,7 +1,12 @@
 
 import React from 'react';
+import { CountryCode } from '../lib/types';
 
-export const LegalFooter: React.FC = () => {
+interface LegalFooterProps {
+  country?: CountryCode;
+}
+
+export const LegalFooter: React.FC<LegalFooterProps> = ({ country = 'US' }) => {
   const currentYear = new Date().getFullYear();
 
   return (
@@ -16,10 +21,12 @@ export const LegalFooter: React.FC = () => {
               </p>
             </div>
             <div>
-              <h5 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3">State Compliance</h5>
+              <h5 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3">Regional Compliance</h5>
               <p className="text-[10px] text-slate-400 leading-relaxed">
-                This service is void where prohibited by law. While we strive to adhere to all state-specific consumer protection regulations, users are responsible for verifying the applicability of specific tax and financial rules in their jurisdiction of residence. 
-                Please consult a qualified professional (CPA, CFP®, or Attorney) before making financial decisions.
+                {country === 'US' 
+                  ? "This service is void where prohibited by law. While we strive to adhere to all state-specific consumer protection regulations, users are responsible for verifying the applicability of specific tax rules. Consult a CPA or CFP®."
+                  : "This tool is not regulated by the Financial Conduct Authority (FCA). Tax treatments (e.g., ISA, Pension relief) depend on individual circumstances and may change in the future. Consult a qualified Independent Financial Adviser (IFA)."
+                }
               </p>
             </div>
          </div>
@@ -31,7 +38,7 @@ export const LegalFooter: React.FC = () => {
             <div className="flex gap-4">
                <span className="text-[10px] text-slate-300 cursor-pointer hover:text-slate-400">Privacy Policy</span>
                <span className="text-[10px] text-slate-300 cursor-pointer hover:text-slate-400">Terms of Service</span>
-               <span className="text-[10px] text-slate-300 cursor-pointer hover:text-slate-400">Accessibility (ADA)</span>
+               <span className="text-[10px] text-slate-300 cursor-pointer hover:text-slate-400">Accessibility</span>
             </div>
          </div>
       </div>

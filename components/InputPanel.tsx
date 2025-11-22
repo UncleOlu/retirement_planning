@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
-import { UserInput, InvestmentStrategyType, CurrencyCode } from '../lib/types';
-import { INVESTMENT_STRATEGIES, CURRENCIES } from '../lib/constants';
+import { UserInput, InvestmentStrategyType, CurrencyCode, CountryCode } from '../lib/types';
+import { INVESTMENT_STRATEGIES, CURRENCIES, COUNTRY_CONFIG } from '../lib/constants';
 import { Tooltip } from './ui/Tooltip';
 import { CurrencyInput } from './ui/CurrencyInput';
 import { DecimalInput } from './ui/DecimalInput';
@@ -10,11 +10,14 @@ import { DollarSign, Euro, PoundSterling, Percent, PiggyBank, ChevronUp, Lightbu
 interface InputPanelProps {
   inputs: UserInput;
   onChange: (newInputs: UserInput) => void;
+  country?: CountryCode;
 }
 
-export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
+export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange, country = 'US' }) => {
   const [showPortfolioSplit, setShowPortfolioSplit] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  
+  const config = COUNTRY_CONFIG[country];
 
   const CurrencyIcon = ({ className, size }: { className?: string, size?: number }) => {
     if (inputs.currency === 'EUR') return <Euro className={className} size={size} />;
@@ -147,57 +150,25 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
     const annual401k = total401k * 12;
     const totalAnnualSavings = inputs.monthlyContribution * 12;
     
-    // 1. Catch-up Contributions (Age 50+)
+    // Age 50+ Catch-up
     if (inputs.currentAge >= 50) {
-       if (annual401k > 23000 && annual401k < 30000) { 
-         return { 
-           title: "Catch-Up Contributions", 
-           text: "Since you are over 50, you have higher contribution limits. You can add an extra $7,500 to your 401(k) annually. Use this catch-up allowance!" 
-         };
-       }
+       return { 
+           title: "Age 50+ Catch-Up", 
+           text: config.tips.catchUp
+       };
     }
 
-    // 2. Backdoor Roth Strategy
-    if (totalAnnualSavings > 30000 && inputs.savingsRothIRA === 0) {
+    // Tax Advantage Tip
+    if (inputs.savingsBrokerage > 0 && annual401k < 10000) { // Simplified threshold for tip
       return { 
-        title: "Backdoor Roth Strategy", 
-        text: "High earner? If you're phased out of direct Roth IRA contributions due to income limits, consider a 'Backdoor Roth': Contribute to a Traditional IRA (non-deductible) and convert it to Roth." 
+        title: "Maximize Tax Efficiency", 
+        text: config.tips.taxAdvantage
       };
-    }
-
-    // 3. Brokerage Efficiency
-    if (inputs.savingsBrokerage > 0 && annual401k < 23500) {
-      return { 
-        title: "Maximize Tax-Advantaged Space", 
-        text: "You are funding a taxable brokerage account but haven't maxed your 401(k). Consider filling tax-advantaged buckets first to reduce your tax drag." 
-      };
-    }
-
-    // 4. Mega Backdoor Roth
-    if (annual401k >= 23000 && inputs.savingsBrokerage > 500) {
-       return {
-         title: "Mega Backdoor Roth",
-         text: "Maxed out your 401(k)? Check if your employer plan offers 'After-Tax' contributions with in-service withdrawals. This allows you to contribute up to ~$69k total into tax-advantaged space."
-       }
-    }
-
-    // 5. HSA
-    if (inputs.currentAge < 65 && inputs.monthlyContribution > 500) {
-       if (inputs.monthlyContribution % 100 !== 0) { 
-         return { 
-            title: "The Triple Tax Threat", 
-            text: "Don't forget the Health Savings Account (HSA). It offers tax-deductible contributions, tax-free growth, and tax-free withdrawals for medical expenses. It's a stealth retirement account." 
-         };
-       }
     }
 
     // 6. Standard Checks
     if (inputs.currentPortfolio > 0 && inputs.currentRothBalance === 0 && !showPortfolioSplit) {
-      return { title: "Did you know?", text: "If you have tax-free accounts (like Roth), check 'Split Portfolio' above. Tax-free growth is powerful!" };
-    }
-    
-    if (inputs.monthlyRothContribution === 0 && inputs.monthlyContribution > 0) {
-      return { title: "Diversify Taxes", text: "Consider a Roth/Post-Tax account. Paying taxes now means tax-free withdrawals later, hedging against future tax hikes." };
+      return { title: "Did you know?", text: `If you have tax-free accounts (like ${config.labels.rothIra}), check 'Split Tax-Free' above.` };
     }
     
     if (inputs.safeWithdrawalRate > 4.5) {
@@ -205,7 +176,7 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
     }
 
     // Fallback
-    return { title: "Compounding Power", text: "The biggest factor in your success is Time. Investing $1,000/mo starting at 25 yields 2x more than starting at 35." };
+    return { title: "Compounding Power", text: "The biggest factor in your success is Time. Investing early yields significantly more than starting later." };
   };
 
   const tip = getFinancialTip();
@@ -301,7 +272,7 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
                  {/* Roth Row */}
                  <div>
                    <label className="text-[10px] text-emerald-600 font-bold flex justify-between mb-1">
-                      <span>Roth (Tax-Free)</span>
+                      <span>{config.labels.rothIra} / Tax-Free</span>
                    </label>
                    <div className="flex items-center gap-3">
                       <input 
@@ -328,7 +299,7 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
                  <div>
                    <label className="text-[10px] text-slate-500 font-bold flex justify-between mb-1">
                       <span className="flex items-center gap-1">
-                        Brokerage (Taxable)
+                        {config.labels.brokerage}
                         <Tooltip text="Assumes your current balance is the Cost Basis. Future gains will be taxed at Capital Gains rates." />
                       </span>
                    </label>
@@ -356,7 +327,7 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
                  {/* Calculated Traditional Row */}
                  <div className="flex justify-between items-center bg-slate-50 p-2 rounded border border-slate-100">
                     <label className="text-[10px] text-slate-500 font-bold">
-                      Traditional 401k / Pre-Tax <span className="font-normal">(Remainder)</span>
+                      {config.labels.trad401k} <span className="font-normal">(Remainder)</span>
                     </label>
                     <span className="text-xs font-bold text-slate-700">
                        {currencySymbol}{currentTradBalance.toLocaleString()}
@@ -383,11 +354,11 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
              <div>
                <div className="flex items-center gap-2 mb-3">
                  <Briefcase size={14} className="text-slate-400" />
-                 <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Employer Plans</span>
+                 <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Workplace Plans</span>
                </div>
                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                  <div>
-                    <label className="block text-[10px] text-slate-500 mb-1">Traditional 401k/403b</label>
+                    <label className="block text-[10px] text-slate-500 mb-1">{config.labels.trad401k}</label>
                     <CurrencyInput 
                        value={inputs.savingsTrad401k || 0}
                        onChange={(val) => handleContributionBreakdownChange('savingsTrad401k', val)}
@@ -395,10 +366,10 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
                        placeholder="0"
                        symbol={<span className="text-slate-400 text-xs"><CurrencyIcon size={12}/></span>}
                     />
-                    <div className="text-[9px] text-slate-400 mt-0.5">Pre-Tax</div>
+                    <div className="text-[9px] text-slate-400 mt-0.5">Pre-Tax / Relief</div>
                  </div>
                  <div>
-                    <label className="block text-[10px] text-emerald-600 mb-1">Roth 401k/403b</label>
+                    <label className="block text-[10px] text-emerald-600 mb-1">{config.labels.roth401k}</label>
                     <CurrencyInput 
                        value={inputs.savingsRoth401k || 0}
                        onChange={(val) => handleContributionBreakdownChange('savingsRoth401k', val)}
@@ -406,7 +377,7 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
                        placeholder="0"
                        symbol={<span className="text-emerald-300 text-xs"><CurrencyIcon size={12}/></span>}
                     />
-                    <div className="text-[9px] text-emerald-500 mt-0.5">Tax-Free Growth</div>
+                    <div className="text-[9px] text-emerald-500 mt-0.5">Post-Tax / AVC</div>
                  </div>
                </div>
              </div>
@@ -417,11 +388,11 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
              <div>
                <div className="flex items-center gap-2 mb-3">
                  <PiggyBank size={14} className="text-slate-400" />
-                 <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Individual Accounts</span>
+                 <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Personal Savings</span>
                </div>
                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                  <div>
-                    <label className="block text-[10px] text-emerald-600 mb-1">Roth IRA / Backdoor</label>
+                    <label className="block text-[10px] text-emerald-600 mb-1">{config.labels.rothIra}</label>
                     <CurrencyInput 
                        value={inputs.savingsRothIRA || 0}
                        onChange={(val) => handleContributionBreakdownChange('savingsRothIRA', val)}
@@ -429,9 +400,10 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
                        placeholder="0"
                        symbol={<span className="text-emerald-300 text-xs"><CurrencyIcon size={12}/></span>}
                     />
+                    <div className="text-[9px] text-emerald-500 mt-0.5">Tax-Free Growth</div>
                  </div>
                  <div>
-                    <label className="block text-[10px] text-slate-500 mb-1">Brokerage (Stocks/ETF)</label>
+                    <label className="block text-[10px] text-slate-500 mb-1">{config.labels.brokerage}</label>
                     <CurrencyInput 
                        value={inputs.savingsBrokerage || 0}
                        onChange={(val) => handleContributionBreakdownChange('savingsBrokerage', val)}
@@ -439,7 +411,7 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
                        placeholder="0"
                        symbol={<span className="text-slate-400 text-xs"><CurrencyIcon size={12}/></span>}
                     />
-                    <div className="text-[9px] text-slate-400 mt-0.5">Taxable Capital Gains</div>
+                    <div className="text-[9px] text-slate-400 mt-0.5">Taxable</div>
                  </div>
                </div>
              </div>
@@ -496,7 +468,7 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange }) => {
         {/* Social Security Input */}
          <div className="space-y-1">
           <label className="text-xs font-bold text-slate-700 flex items-center gap-2">
-            Social Security / National Pension
+            {config.labels.socialSecurity}
             <Tooltip text="Estimated monthly government benefit in today's dollars. This reduces the amount you need to withdraw from your portfolio." />
           </label>
           <CurrencyInput 

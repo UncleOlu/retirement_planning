@@ -16,6 +16,7 @@ export interface InvestmentStrategy {
 }
 
 export type CurrencyCode = 'USD' | 'EUR' | 'GBP';
+export type CountryCode = 'US' | 'UK';
 
 export interface UserInput {
   currentAge: number;

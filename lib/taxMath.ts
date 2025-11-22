@@ -194,3 +194,111 @@ export const calculateUSFederalTax = (
     deductionUsed
   };
 };
+
+// --- UK TAX LOGIC (2024/25) ---
+
+export interface UKTaxResult {
+  incomeTax: number;
+  nationalInsurance: number;
+  totalTax: number;
+  netPay: number;
+  effectiveRate: number;
+  marginalRate: number;
+  personalAllowance: number;
+}
+
+export const calculateUKTax = (
+  wages: number,
+  preTaxDeductions: number, // e.g. Salary Sacrifice Pension
+): UKTaxResult => {
+  
+  const taxableIncome = Math.max(0, wages - preTaxDeductions);
+  
+  // 1. Personal Allowance Logic
+  // Standard £12,570. Tapers by £1 for every £2 over £100k
+  let personalAllowance = 12570;
+  if (taxableIncome > 100000) {
+    const reduction = (taxableIncome - 100000) / 2;
+    personalAllowance = Math.max(0, personalAllowance - reduction);
+  }
+
+  const incomeSubjectToTax = Math.max(0, taxableIncome - personalAllowance);
+
+  // 2. Income Tax Bands (2024/25)
+  // Basic: £12,571 to £50,270 (20%)
+  // Higher: £50,271 to £125,140 (40%)
+  // Additional: Over £125,140 (45%)
+  
+  // Note: These bands sit on top of Personal Allowance if PA is standard,
+  // but strictly the bands are defined by taxable income AFTER PA? 
+  // UK system: Bands usually defined as "Taxable Income" brackets where Taxable Income = Gross - PA?
+  // Actually, UK usually defines bands by "Gross Income" thresholds assuming Standard PA.
+  // Let's use the "Taxable Income" approach (Gross - PA).
+  // Basic Band size: 37,700 (50270 - 12570)
+  // Higher Band size: 74,870 (125140 - 50270)
+  
+  let incomeTax = 0;
+  let marginalRate = 0;
+  let remaining = incomeSubjectToTax;
+
+  // Basic Rate (20%)
+  const basicBand = 37700;
+  const taxedAtBasic = Math.min(remaining, basicBand);
+  if (taxedAtBasic > 0) {
+    incomeTax += taxedAtBasic * 0.20;
+    remaining -= taxedAtBasic;
+    marginalRate = 20;
+  }
+
+  // Higher Rate (40%)
+  const higherBand = 74870;
+  if (remaining > 0) {
+    const taxedAtHigher = Math.min(remaining, higherBand);
+    incomeTax += taxedAtHigher * 0.40;
+    remaining -= taxedAtHigher;
+    marginalRate = 40;
+  }
+
+  // Additional Rate (45%)
+  if (remaining > 0) {
+    incomeTax += remaining * 0.45;
+    marginalRate = 45;
+  }
+
+  // 3. National Insurance (Class 1)
+  // Thresholds (Annualized approx):
+  // Lower Earnings Limit (LEL): £6,396 (0%)
+  // Primary Threshold (PT): £12,570 (Start paying)
+  // Upper Earnings Limit (UEL): £50,270
+  // Rates: 8% between PT and UEL, 2% above UEL.
+  
+  // Note: NI is based on GROSS WAGES usually (before pension if relief at source, but AFTER if salary sacrifice).
+  // We will assume Salary Sacrifice (preTaxDeductions reduces NIable pay).
+  const niablePay = taxableIncome; 
+  
+  let ni = 0;
+  const pt = 12570;
+  const uel = 50270;
+
+  if (niablePay > pt) {
+    const niMainBand = Math.min(niablePay, uel) - pt;
+    ni += niMainBand * 0.08; // 8%
+  }
+  
+  if (niablePay > uel) {
+    const niUpperBand = niablePay - uel;
+    ni += niUpperBand * 0.02; // 2%
+  }
+
+  const totalTax = incomeTax + ni;
+
+  return {
+    incomeTax,
+    nationalInsurance: ni,
+    totalTax,
+    netPay: wages - totalTax - preTaxDeductions,
+    effectiveRate: wages > 0 ? (totalTax / wages) * 100 : 0,
+    marginalRate,
+    personalAllowance
+  };
+};

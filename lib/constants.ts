@@ -1,5 +1,5 @@
 
-import { InvestmentStrategy, InvestmentStrategyType, UserInput, HistoricalBenchmark, CurrencyCode } from './types';
+import { InvestmentStrategy, InvestmentStrategyType, UserInput, HistoricalBenchmark, CurrencyCode, CountryCode } from './types';
 
 export const INVESTMENT_STRATEGIES: Record<InvestmentStrategyType, InvestmentStrategy> = {
   [InvestmentStrategyType.CONSERVATIVE]: {
@@ -42,6 +42,56 @@ export const CURRENCIES: Record<CurrencyCode, { symbol: string, label: string, l
   GBP: { symbol: '£', label: 'GBP (£)', locale: 'en-GB' },
 };
 
+export const COUNTRY_CONFIG: Record<CountryCode, {
+  currency: CurrencyCode;
+  labels: {
+    trad401k: string;
+    roth401k: string;
+    rothIra: string;
+    brokerage: string;
+    socialSecurity: string;
+    taxEstimatorTitle: string;
+    educationAccount: string;
+  };
+  tips: {
+    catchUp: string;
+    taxAdvantage: string;
+  }
+}> = {
+  US: {
+    currency: 'USD',
+    labels: {
+      trad401k: "Traditional 401k/403b",
+      roth401k: "Roth 401k/403b",
+      rothIra: "Roth IRA / Backdoor",
+      brokerage: "Brokerage (Taxable)",
+      socialSecurity: "Social Security",
+      taxEstimatorTitle: "Federal Tax Estimator (US)",
+      educationAccount: "529 Plan"
+    },
+    tips: {
+      catchUp: "Since you are over 50, you can contribute extra 'catch-up' funds to your 401(k) and IRA.",
+      taxAdvantage: "Maximize tax-advantaged accounts (401k, IRA, HSA) before funding taxable brokerage accounts."
+    }
+  },
+  UK: {
+    currency: 'GBP',
+    labels: {
+      trad401k: "Workplace Pension",
+      roth401k: "Additional Voluntary Contrib.",
+      rothIra: "ISA (Stocks & Shares)",
+      brokerage: "General Investment Account",
+      socialSecurity: "State Pension",
+      taxEstimatorTitle: "Income Tax Estimator (UK)",
+      educationAccount: "Junior ISA / Education"
+    },
+    tips: {
+      catchUp: "Ensure you are maximizing your pension annual allowance (£60k). Unused allowance from previous 3 years can be carried forward.",
+      taxAdvantage: "Maximize your £20,000 ISA allowance annually. It is completely tax-free for growth and withdrawals."
+    }
+  }
+};
+
 export const INITIAL_INPUTS: UserInput = {
   currentAge: 35,
   retirementAge: 65,
@@ -71,8 +121,8 @@ export const INITIAL_INPUTS: UserInput = {
 };
 
 // Approximate Historical Annualized Returns (Nominal with Dividend Reinvestment)
-// Data source approximation for illustrative "Reality Check" purposes
-export const HISTORICAL_BENCHMARKS: HistoricalBenchmark[] = [
+
+export const US_BENCHMARKS: HistoricalBenchmark[] = [
   {
     ticker: 'SPY',
     name: 'S&P 500 (Large Cap)',
@@ -139,3 +189,79 @@ export const HISTORICAL_BENCHMARKS: HistoricalBenchmark[] = [
     risk: 'Low'
   }
 ];
+
+export const UK_BENCHMARKS: HistoricalBenchmark[] = [
+  {
+    ticker: 'VUKE',
+    name: 'FTSE 100 (UK Large Cap)',
+    description: 'The 100 largest UK companies. Heavy in energy, financials, and materials.',
+    cagr5: 6.5,
+    cagr10: 5.8,
+    cagr15: 6.2,
+    cagr20: 5.5,
+    cagr25: 4.8,
+    cagr30: 6.5,
+    cagr35: 6.9,
+    risk: 'Medium'
+  },
+  {
+    ticker: 'VMID',
+    name: 'FTSE 250 (UK Mid Cap)',
+    description: 'Mid-sized UK companies. More domestic focus and historically higher growth than FTSE 100.',
+    cagr5: 4.2,
+    cagr10: 6.5,
+    cagr15: 9.5,
+    cagr20: 9.2,
+    cagr25: 8.8,
+    cagr30: 9.8,
+    cagr35: 10.1,
+    risk: 'High'
+  },
+  {
+    ticker: 'VUSA',
+    name: 'S&P 500 (GBP)',
+    description: 'US Top 500 companies priced in GBP. Currency fluctuations impact returns.',
+    cagr5: 16.2,
+    cagr10: 15.8,
+    cagr15: 16.5,
+    cagr20: 11.5,
+    cagr25: 8.9,
+    cagr30: 11.8,
+    cagr35: 12.1,
+    risk: 'High'
+  },
+  {
+    ticker: 'VWRL',
+    name: 'FTSE All-World',
+    description: 'Global stocks including emerging markets. The default passive global tracker.',
+    cagr5: 11.5,
+    cagr10: 11.8,
+    cagr15: 10.9,
+    cagr20: 8.5,
+    cagr25: 7.2,
+    cagr30: 8.8,
+    cagr35: 8.5,
+    risk: 'Medium'
+  },
+  {
+    ticker: 'VGOV',
+    name: 'UK Gilts (Gov Bonds)',
+    description: 'UK Government Bonds. Lower risk, lower return, used for stability.',
+    cagr5: -3.5,
+    cagr10: 0.2,
+    cagr15: 2.5,
+    cagr20: 3.8,
+    cagr25: 4.5,
+    cagr30: 5.2,
+    cagr35: 5.8,
+    risk: 'Low'
+  }
+];
+
+export const BENCHMARKS_BY_COUNTRY: Record<CountryCode, HistoricalBenchmark[]> = {
+  US: US_BENCHMARKS,
+  UK: UK_BENCHMARKS
+};
+
+// Backwards compatibility if needed
+export const HISTORICAL_BENCHMARKS = US_BENCHMARKS;

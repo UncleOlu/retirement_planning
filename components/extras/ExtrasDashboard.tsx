@@ -5,29 +5,33 @@ import { MortgageCalculator } from './MortgageCalculator';
 import { FireCalculator } from './FireCalculator';
 import { TaxEstimator } from './TaxEstimator';
 import { EducationCalculator } from './EducationCalculator';
-import { CurrencyCode } from '../../lib/types';
+import { CurrencyCode, CountryCode } from '../../lib/types';
+import { COUNTRY_CONFIG } from '../../lib/constants';
 
 interface ExtrasDashboardProps {
   currency: CurrencyCode;
+  country?: CountryCode;
 }
 
 type ToolId = 'mortgage' | 'tax' | 'fire' | 'education' | null;
 
-export const ExtrasDashboard: React.FC<ExtrasDashboardProps> = ({ currency }) => {
+export const ExtrasDashboard: React.FC<ExtrasDashboardProps> = ({ currency, country = 'US' }) => {
   const activeToolState = useState<ToolId>(null);
   const activeTool = activeToolState[0];
   const setActiveTool = activeToolState[1];
+
+  const config = COUNTRY_CONFIG[country];
 
   const renderActiveTool = () => {
     switch (activeTool) {
       case 'mortgage':
         return <MortgageCalculator currencyCode={currency} />;
       case 'tax':
-        return <TaxEstimator currency={currency} />;
+        return <TaxEstimator currency={currency} country={country} />;
       case 'fire':
         return <FireCalculator currency={currency} />;
       case 'education':
-        return <EducationCalculator currency={currency} />;
+        return <EducationCalculator currency={currency} country={country} />;
       default:
         return null;
     }
@@ -91,10 +95,13 @@ export const ExtrasDashboard: React.FC<ExtrasDashboardProps> = ({ currency }) =>
             <Briefcase size={24} />
           </div>
           <h3 className="text-lg font-bold text-slate-800 mb-2 group-hover:text-emerald-600 transition-colors">
-            Federal Tax Estimator
+            {config.labels.taxEstimatorTitle}
           </h3>
           <p className="text-sm text-slate-500 leading-relaxed">
-            Estimate 2025 federal tax liability with itemized deductions, SALT caps, and projected brackets.
+            {country === 'UK' 
+              ? "Estimate your Take-Home Pay, Income Tax, and National Insurance contributions."
+              : "Estimate 2025 federal tax liability with itemized deductions, SALT caps, and projected brackets."
+            }
           </p>
         </button>
         
@@ -129,10 +136,12 @@ export const ExtrasDashboard: React.FC<ExtrasDashboardProps> = ({ currency }) =>
             <GraduationCap size={24} />
           </div>
           <h3 className="text-lg font-bold text-slate-800 mb-2 group-hover:text-cyan-600 transition-colors">
-            529 Education Planner
+            {config.labels.educationAccount} Planner
           </h3>
           <p className="text-sm text-slate-500 leading-relaxed">
-             Forecast college costs and 529 savings growth. Includes tips on tax-free growth and qualified expenses.
+             {country === 'UK' 
+               ? "Forecast university costs and Junior ISA growth."
+               : "Forecast college costs and 529 savings growth."}
           </p>
         </button>
 
