@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { BENCHMARKS_BY_COUNTRY } from '../lib/constants';
 import { UserInput, InvestmentStrategyType, SimulationResult, HistoricalBenchmark, CountryCode } from '../lib/types';
@@ -37,7 +38,7 @@ export const RealityCheck: React.FC<RealityCheckProps> = ({ inputs, result, coun
 
   // Check if user is overly optimistic ( > 2% over S&P 500 equivalent history)
   // For UK, we use VUSA or All-World as the high growth benchmark to compare against
-  const mainBenchmarkTicker = country === 'UK' ? 'VWRL' : 'SPY';
+  const mainBenchmarkTicker = country === 'UK' ? 'VWRL' : country === 'CA' ? 'VFV' : 'SPY';
   const mainBenchmark = benchmarks.find(b => b.ticker === mainBenchmarkTicker) || benchmarks[0];
   
   // We cast to number to ensure TS knows it's a number (it is defined in interface)
@@ -101,7 +102,7 @@ export const RealityCheck: React.FC<RealityCheckProps> = ({ inputs, result, coun
         
         {/* Section 2: Growth Comparison */}
         <p className="text-sm text-slate-500 mb-4 leading-relaxed">
-          You're assuming a <strong>{userRate}%</strong> return. Here is how broad {country === 'UK' ? 'UK & Global' : 'market'} funds performed over the <strong>Last {selectedPeriod} Years</strong>.
+          You're assuming a <strong>{userRate}%</strong> return. Here is how broad {country === 'UK' ? 'UK & Global' : country === 'CA' ? 'Canadian & US' : 'market'} funds performed over the <strong>Last {selectedPeriod} Years</strong>.
         </p>
 
         {isOptimistic && (
@@ -168,7 +169,7 @@ export const RealityCheck: React.FC<RealityCheckProps> = ({ inputs, result, coun
         </div>
 
         <div className="mt-4 text-[10px] text-slate-400 italic text-center">
-           *Past performance is not indicative of future results. Data represents nominal annualized returns (CAGR) in {country === 'UK' ? 'GBP' : 'USD'}.
+           *Past performance is not indicative of future results. Data represents nominal annualized returns (CAGR) in {country === 'UK' ? 'GBP' : country === 'CA' ? 'CAD' : 'USD'}.
         </div>
       </div>
     </div>

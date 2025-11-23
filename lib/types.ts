@@ -15,8 +15,8 @@ export interface InvestmentStrategy {
   assetMix: string;
 }
 
-export type CurrencyCode = 'USD' | 'EUR' | 'GBP';
-export type CountryCode = 'US' | 'UK';
+export type CurrencyCode = 'USD' | 'EUR' | 'GBP' | 'CAD';
+export type CountryCode = 'US' | 'UK' | 'CA';
 
 export interface UserInput {
   currentAge: number;

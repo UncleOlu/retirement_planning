@@ -302,3 +302,150 @@ export const calculateUKTax = (
     personalAllowance
   };
 };
+
+// --- CANADA TAX LOGIC (2025 Estimate) ---
+
+export interface CanadaTaxResult {
+  federalTax: number;
+  provincialTax: number;
+  cppContribution: number;
+  eiContribution: number;
+  totalTax: number;
+  netPay: number;
+  effectiveRate: number;
+  marginalRate: number;
+  rrspReduction: number; // Tax saved via RRSP
+}
+
+export const calculateCanadaTax = (
+  wages: number,
+  rrspContribution: number,
+): CanadaTaxResult => {
+  // 1. CPP & EI (Applied to Gross Wages)
+  
+  // CPP 2025 (Projected)
+  // YMPE: $71,300 (Basic Exemption $3,500)
+  // Rate: 5.95%
+  // Enhanced YAMPE: ~$81,000 (4% rate on difference)
+  
+  const YMPE = 71300;
+  const YAMPE = 81200; // Est
+  const CPP_BASIC_EXEMPTION = 3500;
+  
+  let cpp = 0;
+  // Base CPP
+  const pensionableEarnings = Math.min(wages, YMPE) - CPP_BASIC_EXEMPTION;
+  if (pensionableEarnings > 0) {
+    cpp += pensionableEarnings * 0.0595;
+  }
+  // Enhanced CPP (Tier 2)
+  if (wages > YMPE) {
+    const tier2Earnings = Math.min(wages, YAMPE) - YMPE;
+    cpp += tier2Earnings * 0.04;
+  }
+
+  // EI 2025 (Projected)
+  // Max Insurable Earnings: $65,700 approx
+  // Rate: 1.64% (Outside Quebec)
+  const EI_MAX_EARNINGS = 65700; 
+  const ei = Math.min(wages, EI_MAX_EARNINGS) * 0.0164;
+
+  // 2. Taxable Income (After RRSP)
+  // Note: CPP/EI deductions are tax credits, not direct income deductions usually (except enhanced CPP), 
+  // but for simple estimation we usually deduct RRSP from Gross.
+  // We will treat Enhanced CPP as a deduction, and basic CPP/EI as credits.
+  // Simplifying: Just Taxable = Gross - RRSP. The credits are applied against tax.
+  
+  const taxableIncome = Math.max(0, wages - rrspContribution);
+
+  // 3. Federal Tax (2025 Brackets Estimate)
+  // $0 - $57,375: 15%
+  // $57,375 - $114,750: 20.5%
+  // $114,750 - $177,882: 26%
+  // $177,882 - $253,400: 29%
+  // Over $253,400: 33%
+  
+  const fedBrackets = [
+    { rate: 0.15, min: 0, max: 57375 },
+    { rate: 0.205, min: 57375, max: 114750 },
+    { rate: 0.26, min: 114750, max: 177882 },
+    { rate: 0.29, min: 177882, max: 253400 },
+    { rate: 0.33, min: 253400, max: Infinity }
+  ];
+
+  let federalTax = 0;
+  let marginalRateFed = 0;
+
+  for (const b of fedBrackets) {
+    if (taxableIncome > b.min) {
+      const amt = Math.min(taxableIncome, b.max) - b.min;
+      federalTax += amt * b.rate;
+      marginalRateFed = b.rate;
+    }
+  }
+
+  // Basic Personal Amount Credit (Fed) ~ $16,000 * 15%
+  const BPA = 16000; // Approx
+  const fedCredits = (BPA + (Math.min(wages, YMPE) - 3500) * 0.0595 /* Base CPP */ + ei) * 0.15;
+  // Enhanced CPP deduction
+  // Actually, enhanced CPP is a deduction from income, Base CPP is a credit. 
+  // For this estimator, we simplified taxable income. Let's just apply credits.
+  
+  federalTax = Math.max(0, federalTax - fedCredits);
+
+  // 4. Provincial Tax (Ontario Proxy for "Average")
+  // 5.05% on first $52k
+  // 9.15% on next up to $104k
+  // 11.16% on next up to $150k
+  // 12.16% on next up to $220k
+  // 13.16% on excess
+  // Plus Surtax (Health Premium etc). Complicated.
+  // Simplifying to a flat percentage of Federal Tax or simplified brackets for estimation.
+  // Let's use simplified Ontario brackets.
+  
+  const provBrackets = [
+    { rate: 0.0505, min: 0, max: 52000 },
+    { rate: 0.0915, min: 52000, max: 104000 },
+    { rate: 0.1116, min: 104000, max: 150000 },
+    { rate: 0.1216, min: 150000, max: 220000 },
+    { rate: 0.1316, min: 220000, max: Infinity }
+  ];
+
+  let provincialTax = 0;
+  let marginalRateProv = 0;
+  for (const b of provBrackets) {
+    if (taxableIncome > b.min) {
+       const amt = Math.min(taxableIncome, b.max) - b.min;
+       provincialTax += amt * b.rate;
+       marginalRateProv = b.rate;
+    }
+  }
+  
+  // Provincial Credits (BPA ~12k)
+  const provCredits = (12000 + (Math.min(wages, YMPE) - 3500)*0.0595 + ei) * 0.0505;
+  provincialTax = Math.max(0, provincialTax - provCredits);
+  
+  // Ontario Health Premium (approx)
+  let ohp = 0;
+  if (taxableIncome > 20000) ohp = 300;
+  if (taxableIncome > 36000) ohp = 450;
+  if (taxableIncome > 48000) ohp = 600;
+  if (taxableIncome > 72000) ohp = 750;
+  if (taxableIncome > 200000) ohp = 900;
+  
+  provincialTax += ohp;
+
+  const totalTax = federalTax + provincialTax + cpp + ei;
+
+  return {
+    federalTax,
+    provincialTax,
+    cppContribution: cpp,
+    eiContribution: ei,
+    totalTax,
+    netPay: wages - totalTax - rrspContribution,
+    effectiveRate: (totalTax / wages) * 100,
+    marginalRate: (marginalRateFed + marginalRateProv) * 100,
+    rrspReduction: 0 // Placeholder, logic would involve re-calc with 0 rrsp and diff
+  };
+};

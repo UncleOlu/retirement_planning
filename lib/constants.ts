@@ -1,4 +1,5 @@
 
+
 import { InvestmentStrategy, InvestmentStrategyType, UserInput, HistoricalBenchmark, CurrencyCode, CountryCode } from './types';
 
 export const INVESTMENT_STRATEGIES: Record<InvestmentStrategyType, InvestmentStrategy> = {
@@ -40,6 +41,7 @@ export const CURRENCIES: Record<CurrencyCode, { symbol: string, label: string, l
   USD: { symbol: '$', label: 'USD ($)', locale: 'en-US' },
   EUR: { symbol: '€', label: 'EUR (€)', locale: 'de-DE' },
   GBP: { symbol: '£', label: 'GBP (£)', locale: 'en-GB' },
+  CAD: { symbol: '$', label: 'CAD ($)', locale: 'en-CA' },
 };
 
 export const COUNTRY_CONFIG: Record<CountryCode, {
@@ -88,6 +90,22 @@ export const COUNTRY_CONFIG: Record<CountryCode, {
     tips: {
       catchUp: "Ensure you are maximizing your pension annual allowance (£60k). Unused allowance from previous 3 years can be carried forward.",
       taxAdvantage: "Maximize your £20,000 ISA allowance annually. It is completely tax-free for growth and withdrawals."
+    }
+  },
+  CA: {
+    currency: 'CAD',
+    labels: {
+      trad401k: "RRSP (Registered)",
+      roth401k: "Group RRSP / DCPP",
+      rothIra: "TFSA (Tax-Free)",
+      brokerage: "Non-Registered / Margin",
+      socialSecurity: "CPP & OAS",
+      taxEstimatorTitle: "Income Tax Estimator (Canada)",
+      educationAccount: "RESP"
+    },
+    tips: {
+      catchUp: "Check your CRA My Account for unused RRSP deduction limit and TFSA contribution room carried forward.",
+      taxAdvantage: "Max out your TFSA first for flexibility, then RRSP for tax deduction if your income is high."
     }
   }
 };
@@ -258,9 +276,79 @@ export const UK_BENCHMARKS: HistoricalBenchmark[] = [
   }
 ];
 
+export const CA_BENCHMARKS: HistoricalBenchmark[] = [
+  {
+    ticker: 'XIU',
+    name: 'TSX 60 (Can Large Cap)',
+    description: 'Top 60 companies in Canada. Heavy in Financials and Energy.',
+    cagr5: 8.5,
+    cagr10: 7.2,
+    cagr15: 7.8,
+    cagr20: 8.1,
+    cagr25: 7.5,
+    cagr30: 8.2,
+    cagr35: 8.5,
+    risk: 'Medium'
+  },
+  {
+    ticker: 'VFV',
+    name: 'S&P 500 (CAD)',
+    description: 'US Top 500 companies priced in CAD (Unhedged). Boosted by USD strength recently.',
+    cagr5: 15.2,
+    cagr10: 14.5,
+    cagr15: 14.8,
+    cagr20: 9.8,
+    cagr25: 7.9,
+    cagr30: 10.5,
+    cagr35: 10.8,
+    risk: 'High'
+  },
+  {
+    ticker: 'XBB',
+    name: 'CDN Aggregate Bond',
+    description: 'Broad Canadian investment grade bonds. Stability and income.',
+    cagr5: 0.8,
+    cagr10: 2.1,
+    cagr15: 3.2,
+    cagr20: 3.8,
+    cagr25: 4.5,
+    cagr30: 5.5,
+    cagr35: 6.1,
+    risk: 'Low'
+  },
+  {
+    ticker: 'XEF',
+    name: 'EAFE (Intl Developed)',
+    description: 'Europe, Australia, and Far East stocks. Diversification outside North America.',
+    cagr5: 6.5,
+    cagr10: 5.2,
+    cagr15: 5.5,
+    cagr20: 5.1,
+    cagr25: 4.8,
+    cagr30: 5.5,
+    cagr35: 5.8,
+    risk: 'Medium'
+  },
+  {
+    ticker: 'VEE',
+    name: 'Emerging Markets',
+    description: 'Developing economies. High risk, potential for high growth.',
+    cagr5: 3.5,
+    cagr10: 3.8,
+    cagr15: 3.2,
+    cagr20: 7.5,
+    cagr25: 6.8,
+    cagr30: 6.5,
+    cagr35: 7.2,
+    risk: 'High'
+  }
+];
+
+
 export const BENCHMARKS_BY_COUNTRY: Record<CountryCode, HistoricalBenchmark[]> = {
   US: US_BENCHMARKS,
-  UK: UK_BENCHMARKS
+  UK: UK_BENCHMARKS,
+  CA: CA_BENCHMARKS
 };
 
 // Backwards compatibility if needed

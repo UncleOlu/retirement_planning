@@ -1,8 +1,9 @@
 
+
 import React, { useState, useMemo } from 'react';
 import { CURRENCIES, COUNTRY_CONFIG } from '../../lib/constants';
 import { CurrencyCode, CountryCode } from '../../lib/types';
-import { calculateUSFederalTax, calculateUKTax, STANDARD_DEDUCTION_2025 } from '../../lib/taxMath';
+import { calculateUSFederalTax, calculateUKTax, calculateCanadaTax, STANDARD_DEDUCTION_2025 } from '../../lib/taxMath';
 import { CurrencyInput } from '../ui/CurrencyInput';
 import { DecimalInput } from '../ui/DecimalInput';
 import { Percent, Briefcase, FileCheck, Calculator, Info, CheckCircle2, AlertTriangle, Landmark, Users, TrendingUp, Plus, Minus } from 'lucide-react';
@@ -16,6 +17,9 @@ interface TaxEstimatorProps {
 export const TaxEstimator: React.FC<TaxEstimatorProps> = ({ currency, country = 'US' }) => {
   if (country === 'UK') {
     return <UKTaxEstimator currency={currency} />;
+  }
+  if (country === 'CA') {
+    return <CanadaTaxEstimator currency={currency} />;
   }
   return <USTaxEstimator currency={currency} />;
 };
@@ -145,7 +149,7 @@ const USTaxEstimator: React.FC<{ currency: CurrencyCode }> = ({ currency }) => {
            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
              <h3 className="text-sm font-bold text-slate-700 mb-6">Liability Breakdown</h3>
              <div className="flex gap-8 items-center">
-                <div className="w-48 h-48 shrink-0 relative">
+                <div className="w-48 h-48 shrink-0 relative min-w-[12rem] min-h-[12rem]">
                    <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie data={chartData} innerRadius={60} outerRadius={80} dataKey="value">
@@ -231,7 +235,7 @@ const UKTaxEstimator: React.FC<{ currency: CurrencyCode }> = ({ currency }) => {
             <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
                <h3 className="text-sm font-bold text-slate-700 mb-6">Breakdown</h3>
                <div className="flex gap-8 items-center">
-                  <div className="w-48 h-48 shrink-0 relative">
+                  <div className="w-48 h-48 shrink-0 relative min-w-[12rem] min-h-[12rem]">
                      <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                           <Pie data={chartData} innerRadius={60} outerRadius={80} dataKey="value">
@@ -256,6 +260,99 @@ const UKTaxEstimator: React.FC<{ currency: CurrencyCode }> = ({ currency }) => {
                          <div className="flex justify-between text-sm">
                            <span className="font-bold text-indigo-600">Effective Tax Rate</span>
                            <span className="font-bold text-slate-900">{result.effectiveRate.toFixed(1)}%</span>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+            </div>
+         </div>
+      </div>
+    </div>
+  );
+};
+
+const CanadaTaxEstimator: React.FC<{ currency: CurrencyCode }> = ({ currency }) => {
+  const [grossWages, setGrossWages] = useState(75000);
+  const [rrspContrib, setRrspContrib] = useState(0); 
+
+  const currencyConfig = CURRENCIES[currency];
+  const formatCurrency = (val: number) => new Intl.NumberFormat(currencyConfig.locale, { style: 'currency', currency: currency, maximumFractionDigits: 0 }).format(val);
+
+  const result = useMemo(() => {
+     return calculateCanadaTax(grossWages, rrspContrib);
+  }, [grossWages, rrspContrib]);
+
+  const chartData = [
+    { name: 'Net Pay', value: result.netPay, color: '#10b981' },
+    { name: 'Federal Tax', value: result.federalTax, color: '#6366f1' },
+    { name: 'Provincial Tax (ON Est.)', value: result.provincialTax, color: '#8b5cf6' },
+    { name: 'CPP & EI', value: result.cppContribution + result.eiContribution, color: '#f59e0b' },
+    { name: 'RRSP', value: rrspContrib, color: '#3b82f6' },
+  ].filter(d => d.value > 0);
+
+  return (
+    <div className="space-y-8 animate-fade-in">
+      <div className="bg-indigo-900 text-white p-8 rounded-2xl shadow-xl relative overflow-hidden">
+        <div className="relative z-10">
+           <h2 className="text-2xl font-bold flex items-center gap-3 mb-2">
+             <Briefcase className="text-indigo-300" /> Income Tax Estimator (Canada)
+           </h2>
+           <p className="text-indigo-200 max-w-2xl text-sm">
+             Estimate your 2025 take-home pay, Federal & Provincial Tax (Ontario Proxy), CPP, and EI.
+           </p>
+        </div>
+        <div className="absolute right-0 top-0 opacity-10 transform translate-x-1/4 -translate-y-1/4">
+          <Percent size={250} />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+         <div className="lg:col-span-5 space-y-6">
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+               <h3 className="text-sm font-bold text-slate-500 uppercase mb-4">Income Details</h3>
+               <div className="space-y-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700">Annual Gross Salary</label>
+                    <CurrencyInput value={grossWages} onChange={setGrossWages} symbol={currencyConfig.symbol} className="w-full p-3 pl-8 border border-slate-200 rounded-lg font-bold bg-slate-50" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700">RRSP Contribution</label>
+                    <CurrencyInput value={rrspContrib} onChange={setRrspContrib} symbol={currencyConfig.symbol} className="w-full p-3 pl-8 border border-slate-200 rounded-lg font-bold bg-slate-50" />
+                    <p className="text-[10px] text-slate-400">Deductible from taxable income.</p>
+                  </div>
+               </div>
+            </div>
+         </div>
+
+         <div className="lg:col-span-7 space-y-6">
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+               <h3 className="text-sm font-bold text-slate-700 mb-6">Breakdown</h3>
+               <div className="flex gap-8 items-center">
+                  <div className="w-48 h-48 shrink-0 relative min-w-[12rem] min-h-[12rem]">
+                     <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie data={chartData} innerRadius={60} outerRadius={80} dataKey="value">
+                             {chartData.map((e, i) => <Cell key={i} fill={e.color} />)}
+                          </Pie>
+                          <RechartsTooltip formatter={(val:number) => formatCurrency(val)} />
+                        </PieChart>
+                     </ResponsiveContainer>
+                  </div>
+                  <div className="flex-1 space-y-3">
+                     {chartData.map(item => (
+                        <div key={item.name} className="flex justify-between items-center text-sm">
+                           <span className="font-medium text-slate-600 flex items-center gap-2"><div className="w-3 h-3 rounded-full" style={{backgroundColor: item.color}}></div>{item.name}</span>
+                           <span className="font-bold text-slate-800">{formatCurrency(item.value)}</span>
+                        </div>
+                     ))}
+                      <div className="pt-4 mt-4 border-t border-slate-100">
+                         <div className="flex justify-between text-sm">
+                           <span className="font-bold text-indigo-600">Effective Tax Rate</span>
+                           <span className="font-bold text-slate-900">{result.effectiveRate.toFixed(1)}%</span>
+                        </div>
+                         <div className="flex justify-between text-sm mt-1">
+                           <span className="font-bold text-slate-500">Marginal Rate</span>
+                           <span className="font-bold text-slate-700">{result.marginalRate.toFixed(1)}%</span>
                         </div>
                      </div>
                   </div>

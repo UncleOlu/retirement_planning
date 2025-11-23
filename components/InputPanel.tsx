@@ -1,4 +1,5 @@
 
+
 import React, { useState } from 'react';
 import { UserInput, InvestmentStrategyType, CurrencyCode, CountryCode } from '../lib/types';
 import { INVESTMENT_STRATEGIES, CURRENCIES, COUNTRY_CONFIG } from '../lib/constants';
@@ -153,7 +154,7 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange, countr
     // Age 50+ Catch-up
     if (inputs.currentAge >= 50) {
        return { 
-           title: "Age 50+ Catch-Up", 
+           title: "Catch-Up Contributions", 
            text: config.tips.catchUp
        };
     }
@@ -330,7 +331,7 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange, countr
                       {config.labels.trad401k} <span className="font-normal">(Remainder)</span>
                     </label>
                     <span className="text-xs font-bold text-slate-700">
-                       {currencySymbol}{currentTradBalance.toLocaleString()}
+                       {currencySymbol}{currentTradBalance.toLocaleString(CURRENCIES[inputs.currency].locale, { maximumFractionDigits: 0 })}
                     </span>
                  </div>
                  
@@ -344,7 +345,7 @@ export const InputPanel: React.FC<InputPanelProps> = ({ inputs, onChange, countr
           <div className="flex justify-between items-end">
              <label className="text-xs font-bold text-slate-700">Monthly Contribution</label>
              <div className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded border border-indigo-100">
-               Total: {currencySymbol}{inputs.monthlyContribution.toLocaleString()}
+               Total: {currencySymbol}{inputs.monthlyContribution.toLocaleString(CURRENCIES[inputs.currency].locale, { maximumFractionDigits: 0 })}
              </div>
           </div>
           
