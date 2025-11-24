@@ -73,6 +73,9 @@ const App: React.FC = () => {
   const dashboardRef = useRef<HTMLDivElement>(null);
   const mainScrollContainerRef = useRef<HTMLDivElement>(null);
 
+  // Determine if sidebar should be shown (Hidden when in Extras/Calculators mode)
+  const showSidebar = activeTab !== 'extras';
+
   // Ensure we switch to dashboard if resized to desktop width while on inputs tab
   useEffect(() => {
     const handleResize = () => {
@@ -201,6 +204,7 @@ const App: React.FC = () => {
       setViewState('wizard');
     } else {
       setViewState('app');
+      setActiveTab('dashboard');
     }
   };
 
@@ -347,63 +351,78 @@ const App: React.FC = () => {
          </div>
       )}
 
-      {/* Left Sidebar (Inputs) - Desktop Only */}
-      <aside className="hidden md:flex w-[380px] lg:w-[420px] h-full overflow-hidden bg-white border-r border-slate-200 z-20 flex-col shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
-        <div className="p-6 border-b border-slate-100 shrink-0">
-            <div className="flex items-center justify-between mb-4">
-               <button className="flex items-center gap-2 cursor-pointer hover:bg-slate-50 rounded-lg p-2 -ml-2 transition-colors" onClick={() => setViewState('landing')}>
-                  <div className="p-2 bg-emerald-600 rounded-lg text-white shadow-lg shadow-emerald-600/20">
-                    <LayoutDashboard size={20} />
-                  </div>
-                  <h1 className="font-bold text-xl text-slate-900 tracking-tight">Retirement</h1>
-               </button>
-               <div className="flex bg-slate-100 rounded-lg p-1">
-                 <button onClick={() => handleCountryChange('US')} className={`px-2 py-1 rounded text-xs font-bold transition ${country === 'US' ? 'bg-white shadow text-indigo-700' : 'text-slate-400'}`}>🇺🇸 US</button>
-                 <button onClick={() => handleCountryChange('UK')} className={`px-2 py-1 rounded text-xs font-bold transition ${country === 'UK' ? 'bg-white shadow text-indigo-700' : 'text-slate-400'}`}>🇬🇧 UK</button>
-                 <button onClick={() => handleCountryChange('CA')} className={`px-2 py-1 rounded text-xs font-bold transition ${country === 'CA' ? 'bg-white shadow text-indigo-700' : 'text-slate-400'}`}>🇨🇦 CA</button>
-               </div>
-            </div>
-        </div>
-        
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-8">
-          {/* Saved Scenarios Desktop Widget */}
-          <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 group hover:border-indigo-100 transition-colors">
-            <div className="flex justify-between items-center mb-3">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">Saved Scenarios</h3>
-              <button onClick={() => setShowScenarioModal(true)} className="text-emerald-600 hover:text-emerald-700 text-xs font-bold flex items-center gap-1 bg-white px-2 py-1 rounded border border-emerald-100 shadow-sm"><Plus size={12} /> Save</button>
-            </div>
-            {showScenarioModal && (
-               <div className="mb-3 animate-fade-in">
-                  <input type="text" autoFocus placeholder="Name..." value={newScenarioName} onChange={(e) => setNewScenarioName(e.target.value)} className="w-full text-sm p-2 border border-emerald-300 rounded mb-2" onKeyDown={(e) => e.key === 'Enter' && handleSaveScenario()} />
-                  <div className="flex gap-2"><button onClick={handleSaveScenario} className="flex-1 bg-emerald-600 text-white text-xs font-bold py-1.5 rounded">Confirm</button><button onClick={() => setShowScenarioModal(false)} className="flex-1 bg-slate-200 text-slate-600 text-xs font-bold py-1.5 rounded">Cancel</button></div>
-               </div>
-            )}
-            <div className="space-y-1 max-h-[120px] overflow-y-auto custom-scrollbar">
-               {scenarios.map(s => (
-                  <div key={s.id} className="flex justify-between items-center px-2 py-1.5 rounded hover:bg-white hover:shadow-sm group/item">
-                      <button onClick={() => handleLoadScenario(s)} className="text-sm text-slate-600 font-medium truncate flex-1 text-left">{s.name}</button>
-                      <button onClick={() => handleDeleteScenario(s.id)} className="text-slate-300 hover:text-red-400 opacity-0 group-hover/item:opacity-100 transition"><Trash2 size={12} /></button>
-                  </div>
-               ))}
-               {scenarios.length === 0 && <p className="text-xs text-slate-400 italic">No saved plans.</p>}
-            </div>
+      {/* Left Sidebar (Inputs) - Desktop Only (Hidden when in Extras mode) */}
+      {showSidebar && (
+        <aside className="hidden md:flex w-[380px] lg:w-[420px] h-full overflow-hidden bg-white border-r border-slate-200 z-20 flex-col shadow-[4px_0_24px_rgba(0,0,0,0.02)] animate-fade-in">
+          <div className="p-6 border-b border-slate-100 shrink-0">
+              <div className="flex items-center justify-between mb-4">
+                 <button className="flex items-center gap-2 cursor-pointer hover:bg-slate-50 rounded-lg p-2 -ml-2 transition-colors" onClick={() => setViewState('landing')}>
+                    <div className="p-2 bg-emerald-600 rounded-lg text-white shadow-lg shadow-emerald-600/20">
+                      <LayoutDashboard size={20} />
+                    </div>
+                    <h1 className="font-bold text-xl text-slate-900 tracking-tight">Retirement</h1>
+                 </button>
+                 <div className="flex bg-slate-100 rounded-lg p-1">
+                   <button onClick={() => handleCountryChange('US')} className={`px-2 py-1 rounded text-xs font-bold transition ${country === 'US' ? 'bg-white shadow text-indigo-700' : 'text-slate-400'}`}>🇺🇸 US</button>
+                   <button onClick={() => handleCountryChange('UK')} className={`px-2 py-1 rounded text-xs font-bold transition ${country === 'UK' ? 'bg-white shadow text-indigo-700' : 'text-slate-400'}`}>🇬🇧 UK</button>
+                   <button onClick={() => handleCountryChange('CA')} className={`px-2 py-1 rounded text-xs font-bold transition ${country === 'CA' ? 'bg-white shadow text-indigo-700' : 'text-slate-400'}`}>🇨🇦 CA</button>
+                 </div>
+              </div>
           </div>
+          
+          <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-8">
+            {/* Saved Scenarios Desktop Widget */}
+            <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 group hover:border-indigo-100 transition-colors">
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">Saved Scenarios</h3>
+                <button onClick={() => setShowScenarioModal(true)} className="text-emerald-600 hover:text-emerald-700 text-xs font-bold flex items-center gap-1 bg-white px-2 py-1 rounded border border-emerald-100 shadow-sm"><Plus size={12} /> Save</button>
+              </div>
+              {showScenarioModal && (
+                 <div className="mb-3 animate-fade-in">
+                    <input type="text" autoFocus placeholder="Name..." value={newScenarioName} onChange={(e) => setNewScenarioName(e.target.value)} className="w-full text-sm p-2 border border-emerald-300 rounded mb-2" onKeyDown={(e) => e.key === 'Enter' && handleSaveScenario()} />
+                    <div className="flex gap-2"><button onClick={handleSaveScenario} className="flex-1 bg-emerald-600 text-white text-xs font-bold py-1.5 rounded">Confirm</button><button onClick={() => setShowScenarioModal(false)} className="flex-1 bg-slate-200 text-slate-600 text-xs font-bold py-1.5 rounded">Cancel</button></div>
+                 </div>
+              )}
+              <div className="space-y-1 max-h-[120px] overflow-y-auto custom-scrollbar">
+                 {scenarios.map(s => (
+                    <div key={s.id} className="flex justify-between items-center px-2 py-1.5 rounded hover:bg-white hover:shadow-sm group/item">
+                        <button onClick={() => handleLoadScenario(s)} className="text-sm text-slate-600 font-medium truncate flex-1 text-left">{s.name}</button>
+                        <button onClick={() => handleDeleteScenario(s.id)} className="text-slate-300 hover:text-red-400 opacity-0 group-hover/item:opacity-100 transition"><Trash2 size={12} /></button>
+                    </div>
+                 ))}
+                 {scenarios.length === 0 && <p className="text-xs text-slate-400 italic">No saved plans.</p>}
+              </div>
+            </div>
 
-          <InputPanel inputs={inputs} onChange={setInputs} country={country} />
-        </div>
-      </aside>
+            <InputPanel inputs={inputs} onChange={setInputs} country={country} />
+          </div>
+        </aside>
+      )}
 
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col h-full overflow-hidden relative">
         
         {/* Navigation Bar */}
-        <header className="bg-white border-b border-slate-200 px-4 md:px-6 py-3 flex justify-between items-center shrink-0 z-40 shadow-sm">
-          <div className="flex space-x-1 sm:space-x-2 overflow-x-auto no-scrollbar mask-gradient">
-            <button onClick={() => setActiveTab('inputs')} className={`md:hidden flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${activeTab === 'inputs' ? 'bg-emerald-50 text-emerald-700' : 'text-slate-500'}`}><User size={16} /> Profile</button>
-            <button onClick={() => setActiveTab('dashboard')} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${activeTab === 'dashboard' ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}><PieChart size={16} /> Dashboard</button>
-            <button onClick={() => setActiveTab('compare')} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${activeTab === 'compare' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500 hover:text-slate-700'}`}><Layers size={16} /> Compare</button>
-            <button onClick={() => setActiveTab('sandbox')} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${activeTab === 'sandbox' ? 'bg-amber-50 text-amber-700' : 'text-slate-500 hover:text-slate-700'}`}><Sliders size={16} /> Sandbox</button>
-             <button onClick={() => setActiveTab('extras')} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${activeTab === 'extras' ? 'bg-purple-50 text-purple-700' : 'text-slate-500 hover:text-slate-700'}`}><Calculator size={16} /> Extras</button>
+        <header className="bg-white border-b border-slate-200 px-4 md:px-6 py-3 flex justify-between items-center shrink-0 z-40 shadow-sm transition-all">
+          <div className="flex items-center gap-4 flex-1 min-w-0">
+            
+            {/* Contextual Branding when Sidebar is hidden */}
+            {!showSidebar && (
+               <button onClick={() => setViewState('landing')} className="hidden md:flex items-center gap-2 hover:bg-slate-50 p-1.5 rounded-lg transition-colors border-r border-slate-200 pr-4 mr-1">
+                  <div className="bg-emerald-600 p-1.5 rounded-lg text-white shadow-sm">
+                    <LayoutDashboard size={18} />
+                  </div>
+                  <span className="font-bold text-slate-900 whitespace-nowrap tracking-tight">Retirement Planner</span>
+               </button>
+            )}
+
+            <div className="flex space-x-1 sm:space-x-2 overflow-x-auto no-scrollbar mask-gradient">
+              <button onClick={() => setActiveTab('inputs')} className={`md:hidden flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${activeTab === 'inputs' ? 'bg-emerald-50 text-emerald-700' : 'text-slate-500'}`}><User size={16} /> Profile</button>
+              <button onClick={() => setActiveTab('dashboard')} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${activeTab === 'dashboard' ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}><PieChart size={16} /> Dashboard</button>
+              <button onClick={() => setActiveTab('compare')} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${activeTab === 'compare' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500 hover:text-slate-700'}`}><Layers size={16} /> Compare</button>
+              <button onClick={() => setActiveTab('sandbox')} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${activeTab === 'sandbox' ? 'bg-amber-50 text-amber-700' : 'text-slate-500 hover:text-slate-700'}`}><Sliders size={16} /> Sandbox</button>
+               <button onClick={() => setActiveTab('extras')} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${activeTab === 'extras' ? 'bg-purple-50 text-purple-700' : 'text-slate-500 hover:text-slate-700'}`}><Calculator size={16} /> Extras</button>
+            </div>
           </div>
 
           {isMainView && <div className="hidden sm:block"><ViewToggle isReal={isBuyingPowerReal} onChange={setIsBuyingPowerReal} /></div>}
