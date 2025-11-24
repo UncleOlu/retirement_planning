@@ -56,12 +56,13 @@ const App: React.FC = () => {
   
   const [isBuyingPowerReal, setIsBuyingPowerReal] = useState<boolean>(true);
   
-  // Initialize tab based on screen size
-  const [activeTab, setActiveTab] = useState<'inputs' | 'dashboard' | 'sandbox' | 'compare' | 'extras'>(() => 
-    window.innerWidth < 768 ? 'inputs' : 'dashboard'
-  );
+  // Initialize tab to dashboard by default so results are first on mobile
+  const [activeTab, setActiveTab] = useState<'inputs' | 'dashboard' | 'sandbox' | 'compare' | 'extras'>('dashboard');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
+  // Mobile Input Panel State (Collapsed by default)
+  const [mobileProfileOpen, setMobileProfileOpen] = useState(false);
+
   // Scenarios State
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
   const [showScenarioModal, setShowScenarioModal] = useState(false);
@@ -70,6 +71,7 @@ const App: React.FC = () => {
   // Refs for scrolling
   const profileRef = useRef<HTMLDivElement>(null);
   const dashboardRef = useRef<HTMLDivElement>(null);
+  const mainScrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Ensure we switch to dashboard if resized to desktop width while on inputs tab
   useEffect(() => {
@@ -87,9 +89,17 @@ const App: React.FC = () => {
     if (window.innerWidth < 768 && viewState === 'app') {
       const timer = setTimeout(() => {
         if (activeTab === 'inputs') {
-          profileRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          setMobileProfileOpen(true); // Auto-expand if specifically navigating to Profile
+          setTimeout(() => {
+             profileRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }, 150); // Slight delay to allow expansion rendering
         } else if (activeTab === 'dashboard') {
-          dashboardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          // Scroll to top of dashboard container
+          if (mainScrollContainerRef.current) {
+             mainScrollContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+          } else {
+             dashboardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
         }
       }, 100);
       return () => clearTimeout(timer);
@@ -140,7 +150,7 @@ const App: React.FC = () => {
     setDebouncedInputs({ ...INITIAL_INPUTS, ...scenario.inputs });
 
     if (activeTab === 'compare') {
-      setActiveTab(window.innerWidth < 768 ? 'inputs' : 'dashboard');
+      setActiveTab('dashboard');
     }
     if (window.innerWidth < 768) setMobileMenuOpen(false);
   };
@@ -176,7 +186,7 @@ const App: React.FC = () => {
           }
         });
       },
-      { threshold: 0.4 }
+      { threshold: 0.3 }
     );
 
     if (profileRef.current) observer.observe(profileRef.current);
@@ -205,8 +215,13 @@ const App: React.FC = () => {
     // without waiting for the 300ms effect timer.
     setDebouncedInputs(newInputs); 
     setViewState('app');
-    // Ensure dashboard is visible immediately
+    // Ensure dashboard is visible immediately and inputs are collapsed
     setActiveTab('dashboard'); 
+    setMobileProfileOpen(false);
+    // Force scroll to top
+    if (mainScrollContainerRef.current) {
+       mainScrollContainerRef.current.scrollTo(0,0);
+    }
   };
 
   // --- Render Logic ---
@@ -241,12 +256,12 @@ const App: React.FC = () => {
       
       {/* Mobile Header - Static at top of flex column on mobile */}
       <div className="md:hidden bg-white px-4 py-3 border-b flex justify-between items-center shrink-0 z-50 relative shadow-sm h-[60px]">
-        <div className="flex items-center gap-2 overflow-hidden">
+        <button onClick={() => setViewState('landing')} className="flex items-center gap-2 overflow-hidden hover:bg-slate-50 rounded-lg p-1 -ml-1 transition-colors">
            <div className="bg-emerald-100 p-1.5 rounded-lg shrink-0">
              <LayoutDashboard className="text-emerald-600" size={18} />
            </div>
            <span className="font-bold text-slate-900 text-sm truncate">Retirement Planner</span>
-        </div>
+        </button>
 
         {/* Right Side: Region Switcher + Menu */}
         <div className="flex items-center gap-3">
@@ -336,12 +351,12 @@ const App: React.FC = () => {
       <aside className="hidden md:flex w-[380px] lg:w-[420px] h-full overflow-hidden bg-white border-r border-slate-200 z-20 flex-col shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
         <div className="p-6 border-b border-slate-100 shrink-0">
             <div className="flex items-center justify-between mb-4">
-               <div className="flex items-center gap-2 cursor-pointer" onClick={() => setViewState('landing')}>
+               <button className="flex items-center gap-2 cursor-pointer hover:bg-slate-50 rounded-lg p-2 -ml-2 transition-colors" onClick={() => setViewState('landing')}>
                   <div className="p-2 bg-emerald-600 rounded-lg text-white shadow-lg shadow-emerald-600/20">
                     <LayoutDashboard size={20} />
                   </div>
                   <h1 className="font-bold text-xl text-slate-900 tracking-tight">Retirement</h1>
-               </div>
+               </button>
                <div className="flex bg-slate-100 rounded-lg p-1">
                  <button onClick={() => handleCountryChange('US')} className={`px-2 py-1 rounded text-xs font-bold transition ${country === 'US' ? 'bg-white shadow text-indigo-700' : 'text-slate-400'}`}>🇺🇸 US</button>
                  <button onClick={() => handleCountryChange('UK')} className={`px-2 py-1 rounded text-xs font-bold transition ${country === 'UK' ? 'bg-white shadow text-indigo-700' : 'text-slate-400'}`}>🇬🇧 UK</button>
@@ -395,25 +410,13 @@ const App: React.FC = () => {
         </header>
 
         {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-50 scroll-smooth">
+        <div ref={mainScrollContainerRef} className="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-50 scroll-smooth">
           <div className="max-w-7xl mx-auto space-y-8 pb-10">
             <Suspense fallback={<div className="flex items-center justify-center h-64 text-slate-400 gap-2"><Loader2 className="animate-spin" /> Loading Module...</div>}>
             
             {isMainView ? (
               <>
-                {/* Mobile: Profile Section */}
-                <div ref={profileRef} className="md:hidden space-y-6 scroll-mt-24 min-h-[50vh]">
-                   <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
-                      <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2 mb-6"><User className="text-emerald-600" size={24} /> Profile & Data</h2>
-                      <InputPanel inputs={inputs} onChange={setInputs} country={country} />
-                   </div>
-                   <div className="flex flex-col items-center justify-center text-slate-300 gap-1 py-2 animate-pulse">
-                      <span className="text-[10px] font-bold uppercase tracking-widest">Scroll for Results</span>
-                      <ChevronDown size={20} />
-                   </div>
-                </div>
-
-                {/* Dashboard Section */}
+                {/* Dashboard Section (Now First on Mobile) */}
                 <div ref={dashboardRef} className="scroll-mt-24 min-h-[80vh]">
                   <div className="md:hidden mb-4"><ViewToggle isReal={isBuyingPowerReal} onChange={setIsBuyingPowerReal} className="w-full" /></div>
 
@@ -443,6 +446,31 @@ const App: React.FC = () => {
                       </ul>
                     </div>
                   </div>
+                </div>
+
+                {/* Mobile: Profile Section (Moved Below & Minimized via Collapsible) */}
+                <div ref={profileRef} className="md:hidden space-y-6 scroll-mt-24 mt-8 pb-10">
+                   <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                      <button 
+                         onClick={() => setMobileProfileOpen(!mobileProfileOpen)}
+                         className="w-full p-5 flex items-center justify-between bg-white hover:bg-slate-50 transition"
+                      >
+                          <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                             <User className="text-emerald-600" size={24} /> 
+                             Edit Profile & Data
+                          </h2>
+                          <ChevronDown 
+                             size={20} 
+                             className={`text-slate-400 transition-transform duration-300 ${mobileProfileOpen ? 'rotate-180' : ''}`} 
+                          />
+                      </button>
+                      
+                      {mobileProfileOpen && (
+                         <div className="p-5 border-t border-slate-100 animate-fade-in">
+                            <InputPanel inputs={inputs} onChange={setInputs} country={country} />
+                         </div>
+                      )}
+                   </div>
                 </div>
               </>
             ) : activeTab === 'compare' ? (
