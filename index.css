@@ -3,6 +3,10 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  color-scheme: light;
+}
+
 /* Styles are handled by Tailwind */
 .no-scrollbar::-webkit-scrollbar {
   display: none;

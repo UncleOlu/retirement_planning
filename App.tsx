@@ -135,6 +135,9 @@ const App: React.FC = () => {
 
     // Switch to app view if loading from a scenario
     setViewState('app');
+    
+    // Immediate update for scenarios too
+    setDebouncedInputs({ ...INITIAL_INPUTS, ...scenario.inputs });
 
     if (activeTab === 'compare') {
       setActiveTab(window.innerWidth < 768 ? 'inputs' : 'dashboard');
@@ -198,6 +201,9 @@ const App: React.FC = () => {
 
   const handleWizardComplete = (newInputs: UserInput) => {
     setInputs(newInputs);
+    // Crucial: Update debouncedInputs immediately so the results render instantly
+    // without waiting for the 300ms effect timer.
+    setDebouncedInputs(newInputs); 
     setViewState('app');
     // Ensure dashboard is visible immediately
     setActiveTab('dashboard'); 

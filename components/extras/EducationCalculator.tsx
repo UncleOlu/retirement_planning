@@ -156,16 +156,16 @@ export const EducationCalculator: React.FC<EducationCalculatorProps> = ({ curren
            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
               <h3 className="text-sm font-bold text-slate-500 uppercase mb-4 flex items-center gap-2"><TrendingUp size={16} /> Student Profile</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                 <div className="space-y-1"><label className="text-xs font-bold text-slate-700">Current Age</label><input type="number" value={childAge} onChange={(e) => setChildAge(Number(e.target.value))} className="w-full p-2 border border-slate-200 rounded-lg font-bold text-slate-800 focus:ring-2 focus:ring-cyan-500 outline-none" /></div>
-                 <div className="space-y-1"><label className="text-xs font-bold text-slate-700">Uni/College Start</label><input type="number" value={collegeStartAge} onChange={(e) => setCollegeStartAge(Number(e.target.value))} className="w-full p-2 border border-slate-200 rounded-lg font-bold text-slate-800 focus:ring-2 focus:ring-cyan-500 outline-none" /></div>
+                 <div className="space-y-1"><label className="text-xs font-bold text-slate-700">Current Age</label><input type="number" value={childAge} onChange={(e) => setChildAge(Number(e.target.value))} className="w-full p-2 border border-slate-200 rounded-lg font-bold text-slate-800 focus:ring-2 focus:ring-cyan-500 outline-none bg-white" /></div>
+                 <div className="space-y-1"><label className="text-xs font-bold text-slate-700">Uni/College Start</label><input type="number" value={collegeStartAge} onChange={(e) => setCollegeStartAge(Number(e.target.value))} className="w-full p-2 border border-slate-200 rounded-lg font-bold text-slate-800 focus:ring-2 focus:ring-cyan-500 outline-none bg-white" /></div>
               </div>
            </div>
            
            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
               <h3 className="text-sm font-bold text-slate-500 uppercase mb-4 flex items-center gap-2"><PiggyBank size={16} /> Funding Plan</h3>
               <div className="space-y-4">
-                 <div className="space-y-1"><label className="text-xs font-bold text-slate-700">Current Balance</label><CurrencyInput value={currentSavings} onChange={setCurrentSavings} symbol={currencyConfig.symbol} className="w-full p-2 pl-8 border border-slate-200 rounded-lg font-bold text-slate-800 focus:ring-2 focus:ring-cyan-500 outline-none" /></div>
-                 <div className="space-y-1"><label className="text-xs font-bold text-slate-700">Monthly Contribution</label><CurrencyInput value={monthlyContribution} onChange={setMonthlyContribution} symbol={currencyConfig.symbol} className="w-full p-2 pl-8 border border-slate-200 rounded-lg font-bold text-slate-800 focus:ring-2 focus:ring-cyan-500 outline-none" /></div>
+                 <div className="space-y-1"><label className="text-xs font-bold text-slate-700">Current Balance</label><CurrencyInput value={currentSavings} onChange={setCurrentSavings} symbol={currencyConfig.symbol} className="w-full p-2 pl-8 border border-slate-200 rounded-lg font-bold text-slate-800 focus:ring-2 focus:ring-cyan-500 outline-none bg-white" /></div>
+                 <div className="space-y-1"><label className="text-xs font-bold text-slate-700">Monthly Contribution</label><CurrencyInput value={monthlyContribution} onChange={setMonthlyContribution} symbol={currencyConfig.symbol} className="w-full p-2 pl-8 border border-slate-200 rounded-lg font-bold text-slate-800 focus:ring-2 focus:ring-cyan-500 outline-none bg-white" /></div>
                  
                  {country === 'CA' && (
                     <div className="bg-cyan-50 text-cyan-800 text-xs p-3 rounded-lg border border-cyan-100 flex gap-2">

@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { CURRENCIES } from '../../lib/constants';
 import { CurrencyCode } from '../../lib/types';
@@ -91,7 +92,7 @@ export const FireCalculator: React.FC<FireCalculatorProps> = ({ currency }) => {
                         type="number" 
                         value={currentAge}
                         onChange={(e) => setCurrentAge(Number(e.target.value))}
-                        className="w-full p-2 border border-slate-200 rounded font-bold text-slate-800 focus:ring-2 focus:ring-orange-500 outline-none"
+                        className="w-full p-2 border border-slate-200 rounded font-bold text-slate-800 focus:ring-2 focus:ring-orange-500 outline-none bg-white"
                       />
                    </div>
                    <div className="space-y-1">
@@ -100,7 +101,7 @@ export const FireCalculator: React.FC<FireCalculatorProps> = ({ currency }) => {
                          value={netWorth}
                          onChange={setNetWorth}
                          symbol={currencyConfig.symbol}
-                         className="w-full p-2 pl-6 border border-slate-200 rounded font-bold text-slate-800 focus:ring-2 focus:ring-orange-500 outline-none"
+                         className="w-full p-2 pl-6 border border-slate-200 rounded font-bold text-slate-800 focus:ring-2 focus:ring-orange-500 outline-none bg-white"
                       />
                    </div>
                 </div>

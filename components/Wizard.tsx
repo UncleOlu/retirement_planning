@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { UserInput, InvestmentStrategyType, CountryCode } from '../lib/types';
 import { CurrencyInput } from './ui/CurrencyInput';
 import { ArrowLeft, ArrowRight, CheckCircle, TrendingUp, DollarSign, Calendar, Target, Globe } from 'lucide-react';
-import { CURRENCIES } from '../lib/constants';
+import { CURRENCIES, COUNTRY_CONFIG } from '../lib/constants';
 
 interface WizardProps {
   currentInputs: UserInput;
@@ -17,10 +17,20 @@ export const Wizard: React.FC<WizardProps> = ({ currentInputs, country, onCountr
   const [step, setStep] = useState(1);
   const [inputs, setInputs] = useState<UserInput>(currentInputs);
 
-  // Sync internal state if currentInputs updates (e.g. from parent country change)
+  // Note: We intentionally do NOT listen to `currentInputs` prop changes after mount.
+  // This allows the user to switch countries (which triggers a parent prop update)
+  // without wiping their entered data (age, savings, etc) in the local state.
+  
+  // However, when Country changes, we DO want to update the Currency and Regional Defaults.
   useEffect(() => {
-    setInputs(currentInputs);
-  }, [currentInputs]);
+    const config = COUNTRY_CONFIG[country];
+    setInputs(prev => ({
+      ...prev,
+      currency: config.currency,
+      estimatedSocialSecurity: country === 'UK' ? 900 : country === 'CA' ? 1400 : 2000,
+      targetValue: country === 'UK' ? 40000 : 60000
+    }));
+  }, [country]);
 
   const totalSteps = 4;
   const currencyConfig = CURRENCIES[inputs.currency];
@@ -36,7 +46,28 @@ export const Wizard: React.FC<WizardProps> = ({ currentInputs, country, onCountr
   };
 
   const update = (field: keyof UserInput, val: any) => {
-    setInputs(prev => ({ ...prev, [field]: val }));
+    setInputs(prev => {
+      const newState = { ...prev, [field]: val };
+      
+      // Fix: Ensure aggregated input updates in Wizard also update/reset detailed breakdown fields
+      // to prevents logic conflicts in simulation engine which prioritizes detailed buckets.
+      if (field === 'monthlyContribution') {
+         // Default to "Traditional" (Pre-tax) savings for simplicity in Wizard
+         newState.savingsTrad401k = val as number;
+         newState.savingsRoth401k = 0;
+         newState.savingsRothIRA = 0;
+         newState.savingsBrokerage = 0;
+         newState.monthlyRothContribution = 0;
+      }
+      
+      if (field === 'currentPortfolio') {
+         // Reset breakdown to ensure "Remainder" logic in simulation assigns full value to Traditional
+         newState.currentRothBalance = 0;
+         newState.currentBrokerageBalance = 0;
+      }
+      
+      return newState;
+    });
   };
 
   return (
@@ -101,7 +132,7 @@ export const Wizard: React.FC<WizardProps> = ({ currentInputs, country, onCountr
                     type="number" 
                     value={inputs.currentAge}
                     onChange={(e) => update('currentAge', Number(e.target.value))}
-                    className="w-full p-4 border border-slate-200 rounded-xl text-lg font-bold text-slate-900 focus:ring-2 focus:ring-indigo-500 outline-none"
+                    className="w-full p-4 border border-slate-200 rounded-xl text-lg font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500 outline-none bg-white"
                   />
                 </div>
                 <div className="space-y-2">
@@ -110,7 +141,7 @@ export const Wizard: React.FC<WizardProps> = ({ currentInputs, country, onCountr
                     type="number" 
                     value={inputs.retirementAge}
                     onChange={(e) => update('retirementAge', Number(e.target.value))}
-                    className="w-full p-4 border border-slate-200 rounded-xl text-lg font-bold text-slate-900 focus:ring-2 focus:ring-indigo-500 outline-none"
+                    className="w-full p-4 border border-slate-200 rounded-xl text-lg font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500 outline-none bg-white"
                   />
                 </div>
               </div>
@@ -133,7 +164,7 @@ export const Wizard: React.FC<WizardProps> = ({ currentInputs, country, onCountr
                     value={inputs.currentPortfolio}
                     onChange={(val) => update('currentPortfolio', val)}
                     symbol={currencyConfig.symbol}
-                    className="w-full p-4 pl-10 border border-slate-200 rounded-xl text-xl font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500 outline-none"
+                    className="w-full p-4 pl-10 border border-slate-200 rounded-xl text-xl font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500 outline-none bg-white"
                   />
                 </div>
                 <div className="space-y-2">
@@ -142,7 +173,7 @@ export const Wizard: React.FC<WizardProps> = ({ currentInputs, country, onCountr
                     value={inputs.monthlyContribution}
                     onChange={(val) => update('monthlyContribution', val)}
                     symbol={currencyConfig.symbol}
-                    className="w-full p-4 pl-10 border border-slate-200 rounded-xl text-xl font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500 outline-none"
+                    className="w-full p-4 pl-10 border border-slate-200 rounded-xl text-xl font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500 outline-none bg-white"
                   />
                 </div>
               </div>
@@ -167,7 +198,7 @@ export const Wizard: React.FC<WizardProps> = ({ currentInputs, country, onCountr
                     update('targetValue', val * 12);
                   }}
                   symbol={currencyConfig.symbol}
-                  className="w-full p-4 pl-10 border border-slate-200 rounded-xl text-xl font-bold text-slate-900 focus:ring-2 focus:ring-indigo-500 outline-none"
+                  className="w-full p-4 pl-10 border border-slate-200 rounded-xl text-xl font-bold text-slate-900 focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
                 />
               </div>
               <div className="bg-indigo-50 p-4 rounded-xl text-sm text-indigo-800 flex gap-3 items-start">
