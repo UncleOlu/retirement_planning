@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { calculateAmortization, analyzeRefinance, RefinanceOption } from '../../lib/mortgageMath';
 import { TrendingDown, Home, Percent, CheckCircle, XCircle, Unlock, Lock, History, Shield, Building2, Landmark, Receipt, Info } from 'lucide-react';
