@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Sparkles, Sliders, TrendingUp, ShieldCheck, PieChart, ArrowRight, Home, Flame, Briefcase, GraduationCap, Calculator } from 'lucide-react';
 import { CountryCode } from '../lib/types';
@@ -14,9 +13,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onChooseMode, onOpenTo
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-indigo-50/30 flex flex-col items-center justify-center p-4 md:p-8 animate-fade-in relative">
       
-      {/* Top Right Region Selector */}
-      <div className="absolute top-4 right-4 md:top-6 md:right-6 flex items-center gap-3 z-10">
-        <div className="flex bg-white p-1 rounded-full border border-slate-200 shadow-sm">
+      {/* Top Right Region Selector - Scaled down on mobile to prevent overlap */}
+      <div className="absolute top-3 right-3 md:top-6 md:right-6 flex items-center gap-3 z-20">
+        <div className="flex bg-white/90 backdrop-blur-sm p-1 rounded-full border border-slate-200 shadow-sm scale-75 md:scale-100 origin-top-right transition-transform">
           <button 
             onClick={() => onCountryChange('US')}
             className={`px-3 py-1.5 rounded-full text-[10px] md:text-xs font-bold transition-all flex items-center gap-1.5 ${country === 'US' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
@@ -38,8 +37,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onChooseMode, onOpenTo
         </div>
       </div>
 
-      {/* Hero Section */}
-      <div className="max-w-4xl w-full text-center space-y-4 md:space-y-6 mb-8 md:mb-12 mt-12 md:mt-0">
+      {/* Hero Section - Increased top margin on mobile (mt-16) to clear absolute elements */}
+      <div className="max-w-4xl w-full text-center space-y-4 md:space-y-6 mb-8 md:mb-12 mt-16 md:mt-0">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-100 text-indigo-700 text-[10px] md:text-xs font-bold uppercase tracking-wider mb-2">
           <Sparkles size={14} /> Intelligent Financial Forecasting
         </div>
